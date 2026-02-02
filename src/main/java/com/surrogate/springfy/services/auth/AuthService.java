@@ -79,7 +79,7 @@ public class AuthService {
                         .orElse("ROLE_USER");
 
 
-                String token = jwtService.generateTokenWithId(userDetails.getUsername(), role, userDetails.getId(), userDetails.getEmail());
+                String token = jwtService.generateTokenWithId(userDetails.getUsername(), role, userDetails.getId());
 
 
                 return new LoginResponse(success, 200, token, userDetails.getUsername(), userDetails.getId());
@@ -99,12 +99,7 @@ public class AuthService {
             if (isValidRegisterRequest(registerRequest)) {
                 return new RegisterResponse(error, 401, "La constrasenia tiene que tener 8 digitos o mas");
             }
-            if (registerRequest.getRol() == null || registerRequest.getRol().isEmpty()) {
-                return new RegisterResponse(error, 401, "El rol es requerido");
-            }
-            if (registerRequest.getRol().equals("ROLE_ADMINISTRADOR")) {
-                return new RegisterResponse(error, 403, "El rol no puede ser administrador");
-            }
+
             if (usuarioRepository.existsByNombre(registerRequest.getUsername())) {
 
                 return new RegisterResponse(error, 409, "El nombre ya existe");
@@ -117,11 +112,10 @@ public class AuthService {
             Usuario newUsuario = new Usuario();
             newUsuario.setNombre(registerRequest.getUsername());
             newUsuario.setPasswordHash(passwordEncoder.encode(registerRequest.getPassword()));
-            newUsuario.setEmail(registerRequest.getEmail());
-            newUsuario.setRol(registerRequest.getRol() != null ? registerRequest.getRol() : "USER");
-            newUsuario.setImagenUrl(registerRequest.getImagen_url() != null ? registerRequest.getImagen_url() : null);
-            newUsuario.setBiografia(registerRequest.getBiografia()!= null ? registerRequest.getBiografia() : null);
-            newUsuario.setUuid(UUID.randomUUID().toString());
+
+            newUsuario.setRol(registerRequest.getRol() != null ? registerRequest.getRol() : "ROLE_USUARIO");
+
+
         usuarioRepository.save(newUsuario);
 
             return new RegisterResponse(success, 200,"Registro exitoso");
@@ -158,11 +152,9 @@ public class AuthService {
             newUsuario.setPasswordHash(passwordEncoder.encode(registerRequest.getPassword()));
 
             newUsuario.setRol(registerRequest.getRol() != null ? registerRequest.getRol() : "USER");
-            newUsuario.setImagenUrl(registerRequest.getImagen_url() != null ? registerRequest.getImagen_url() : null);
-            newUsuario.setBiografia(registerRequest.getBiografia()!= null ? registerRequest.getBiografia() : null);
-            newUsuario.setEmail(registerRequest.getEmail());
 
-            newUsuario.setUuid(UUID.randomUUID().toString());
+
+
             usuarioRepository.save(newUsuario);
             return new RegisterResponse(success, 200, "Registro exitoso");
         } catch (Exception e) {
@@ -216,14 +208,9 @@ public class AuthService {
         systemAdmin.setNombre("SYSTEM");
         String systempassword = "HolaMundo12345$";
         systemAdmin.setPasswordHash(passwordEncoder.encode(systempassword));
-        systemAdmin.setRol("ROLE_SYSTEM");
+        systemAdmin.setRol("SYSTEM");
 
-        String uuid= UUID.randomUUID().toString();
-        log.info("UUID PARA SYSTEM: {}",uuid);
-        systemAdmin.setUuid(uuid);
 
-        log.info(uuid);
-        systemAdmin.setEmail("santiagoabsalom@gmail.com");
         usuarioRepository.save(systemAdmin);
         log.info("Usuario SYSTEM creado");
 

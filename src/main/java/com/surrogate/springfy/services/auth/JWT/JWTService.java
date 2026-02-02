@@ -106,9 +106,9 @@ public class JWTService {
      * @param id_usuario
      * @return String token
      */
-    public String generateTokenWithId(String username, String role, long id_usuario, String email) {
+    public String generateTokenWithId(String username, String role, long id_usuario) {
         claims.put("role", role);
-        claims.put("email", email);
+
         claims.put("id_usuario", id_usuario);
 
 

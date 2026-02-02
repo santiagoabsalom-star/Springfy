@@ -6,7 +6,7 @@ import com.surrogate.springfy.models.login.LoginResponse;
 import com.surrogate.springfy.models.register.RegisterRequest;
 import com.surrogate.springfy.models.register.RegisterResponse;
 import com.surrogate.springfy.services.auth.AuthService;
-import com.surrogate.springfy.services.auth.UsuarioService;
+
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +28,6 @@ import java.util.Objects;
 @RequestMapping("/api/auth")
 public class AuthController {
     private final AuthService authService;
-    private final UsuarioService usuarioService;
     private final String error;
 
 
@@ -93,7 +92,7 @@ public class AuthController {
         }
     }
 
-    @NotNull
+
     private ResponseEntity<RegisterResponse> getRegisterResponseResponseEntity(RegisterResponse response) {
         if (200 == (response.getHttpCode())) {
             return ResponseEntity.status(HttpStatus.CREATED)

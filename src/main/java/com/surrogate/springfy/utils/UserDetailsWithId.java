@@ -98,5 +98,4 @@ public interface UserDetailsWithId extends Serializable {
 
     long getId();
 
-    String getEmail();
 }

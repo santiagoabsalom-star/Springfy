@@ -13,7 +13,5 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Usuario findUsuarioByNombre(String username);
     boolean existsByNombre(String nombre);
 
-    Usuario findByNombre(String emisor);
-    @Query("Select u from Usuario u where u.uuid= :uuid")
-    Usuario findUsuarioByUuid(String uuid);
+
 }

@@ -1,6 +1,7 @@
 package com.surrogate.springfy.routes.bussiness;
 
 import com.surrogate.springfy.models.YT.SearchRequest;
+import com.surrogate.springfy.models.YT.SearchResponse;
 import com.surrogate.springfy.models.YT.YouTubeSearchResponse;
 import com.surrogate.springfy.services.bussines.SearchService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
+
 @RequestMapping("/api/search")
 public class SearchController {
 private final SearchService searchService;
@@ -19,9 +21,9 @@ private final SearchService searchService;
 
 
 @GetMapping(value = "/by-name", produces = "application/json", consumes = "application/json")
-public ResponseEntity<YouTubeSearchResponse> searchByName(@RequestBody SearchRequest name) throws Exception {
+public ResponseEntity<SearchResponse> searchByName(@RequestBody SearchRequest name) throws Exception {
         String nombre = name.name();
 
-        YouTubeSearchResponse response = searchService.searchByNombre(nombre);
+       SearchResponse response = searchService.searchByNombre(nombre);
 return ResponseEntity.ok(response);}
 }
