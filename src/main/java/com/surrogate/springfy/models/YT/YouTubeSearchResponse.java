@@ -1,4 +1,6 @@
 package com.surrogate.springfy.models.YT;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
 public record YouTubeSearchResponse(
@@ -39,7 +41,7 @@ public record YouTubeSearchResponse(
     ) {}
 
     public record Thumbnails(
-            Thumbnail defaultThumbnail,
+            @JsonProperty("default") Thumbnail defaultThumbnail,
             Thumbnail medium,
             Thumbnail high
     ) {}
