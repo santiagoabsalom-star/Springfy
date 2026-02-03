@@ -6,10 +6,7 @@ import com.surrogate.springfy.models.YT.YouTubeSearchResponse;
 import com.surrogate.springfy.services.bussines.SearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -20,7 +17,7 @@ private final SearchService searchService;
 
 
 
-@GetMapping(value = "/by-name", produces = "application/json", consumes = "application/json")
+@PostMapping(value = "/by-name", produces = "application/json", consumes = "application/json")
 public ResponseEntity<SearchResponse> searchByName(@RequestBody SearchRequest name) throws Exception {
         String nombre = name.name();
 
