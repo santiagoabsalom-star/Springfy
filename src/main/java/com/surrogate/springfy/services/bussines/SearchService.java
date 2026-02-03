@@ -1,8 +1,11 @@
 package com.surrogate.springfy.services.bussines;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.surrogate.springfy.models.DTO.AudioDTO;
 import com.surrogate.springfy.models.YT.SearchResponse;
 import com.surrogate.springfy.models.YT.YouTubeSearchResponse;
+import com.surrogate.springfy.models.bussines.Audio;
+import com.surrogate.springfy.repositories.bussines.AudioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +25,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class SearchService {
-//ejemplo de llamada a la api de youtube -----> https://www.googleapis.com/youtube/v3/search?key=AIzaSyAxhEx5CTiVejjsJbUwoc1xA0ppupc7W0A&q=tu novio no la hace slowed&type=video&part=snippet&maxResults=4&totalResults=10
+    private final AudioRepository audioRepository;
+    //ejemplo de llamada a la api de youtube -----> https://www.googleapis.com/youtube/v3/search?key=AIzaSyAxhEx5CTiVejjsJbUwoc1xA0ppupc7W0A&q=tu novio no la hace slowed&type=video&part=snippet&maxResults=4&totalResults=10
     @Value("${springfy.key}")
     String key;
 
@@ -60,6 +64,12 @@ WebClient httpClient = WebClient.create();
                 + "&q=";
     }
 
+
+public List<AudioDTO> AllInCloud()  {
+
+        return audioRepository.findAllAudios();
+
+}
 
 
 }

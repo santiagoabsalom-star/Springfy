@@ -44,13 +44,14 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                        .requestMatchers("/api/search/by-name").hasAnyRole("USUARIO", "ADMIN","SYSTEM")
+                        .requestMatchers("/api/search/**").permitAll()
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/register"
                         ).permitAll()
 
-                        .requestMatchers("/api/download/**").hasAnyRole("USUARIO", "ADMIN","SYSTEM")
+                        .requestMatchers("/api/download/**").permitAll()
+
                         .anyRequest().authenticated())
 //                .oauth2Login(oauth2 -> oauth2
 //                        .authorizationEndpoint(endpoint -> endpoint.baseUri("/oauth2/authorization"))
@@ -83,7 +84,12 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList(
                 "http://localhost:5173",
-
+                "http://localhost",
+                "http://localhost:3000",
+                "http://localhost:3050",
+                "http://127.0.0.1",
+                "http://127.0.0.1:3050",
+                "http://192.168.0.103",
                 "http://127.0.0.1:5173",
                 "http://192.168.0.45:5173",
                 "http://localhost:5174",

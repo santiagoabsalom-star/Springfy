@@ -11,8 +11,7 @@ class SpringfyApplicationTests {
         this.searchService = searchService;
     }
     public static void main(String[] args) throws Exception {
-        SpringfyApplicationTests tests = new SpringfyApplicationTests(new SearchService());
-        SearchResponse response = tests.searchService.searchByNombre("tunovionolahaceslowed");
+
 
     }
 
