@@ -1,4 +1,5 @@
 package com.surrogate.springfy.models.YT;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
@@ -15,19 +16,22 @@ public record YouTubeSearchResponse(
     public record PageInfo(
             int totalResults,
             int resultsPerPage
-    ) {}
+    ) {
+    }
 
     public record Item(
             String kind,
             String etag,
             Id id,
             Snippet snippet
-    ) {}
+    ) {
+    }
 
     public record Id(
             String kind,
             String videoId
-    ) {}
+    ) {
+    }
 
     public record Snippet(
             String publishedAt,
@@ -38,18 +42,21 @@ public record YouTubeSearchResponse(
             String channelTitle,
             String liveBroadcastContent,
             String publishTime
-    ) {}
+    ) {
+    }
 
     public record Thumbnails(
             @JsonProperty("default") Thumbnail defaultThumbnail,
             Thumbnail medium,
             Thumbnail high
-    ) {}
+    ) {
+    }
 
     public record Thumbnail(
             String url,
             int width,
             int height
-    ) {}
+    ) {
+    }
 }
 

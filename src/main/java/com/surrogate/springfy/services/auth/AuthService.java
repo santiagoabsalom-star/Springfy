@@ -21,8 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.UUID;
-
 @Slf4j
 @RequiredArgsConstructor
 @Service
@@ -39,7 +37,6 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest loginRequest) {
-
 
 
         try {
@@ -105,7 +102,7 @@ public class AuthService {
                 return new RegisterResponse(error, 409, "El nombre ya existe");
 
             }
-            if(registerRequest.getUsername().contains("_")){
+            if (registerRequest.getUsername().contains("_")) {
                 return new RegisterResponse(error, 409, "El nombre no puede tener barra baja");
             }
 
@@ -116,9 +113,9 @@ public class AuthService {
             newUsuario.setRol(registerRequest.getRol() != null ? registerRequest.getRol() : "ROLE_USUARIO");
 
 
-        usuarioRepository.save(newUsuario);
+            usuarioRepository.save(newUsuario);
 
-            return new RegisterResponse(success, 200,"Registro exitoso");
+            return new RegisterResponse(success, 200, "Registro exitoso");
         } catch (Exception e) {
             return new RegisterResponse(error, 200, "Error en el registro: " + e.getMessage());
         }
@@ -134,10 +131,10 @@ public class AuthService {
             if (registerRequest.getRol() == null || registerRequest.getRol().isEmpty()) {
                 return new RegisterResponse(error, 401, "El rol es requerido");
             }
-            if (!registerRequest.getRol().equals("ROLE_ADMINISTRADOR") ) {
+            if (!registerRequest.getRol().equals("ROLE_ADMINISTRADOR")) {
                 return new RegisterResponse(error, 403, "El rol tiene que ser administrador o system");
             }
-            if(registerRequest.getUsername().contains("_")){
+            if (registerRequest.getUsername().contains("_")) {
                 return new RegisterResponse(error, 409, "El nombre no puede tener barra baja");
             }
             if (usuarioRepository.existsByNombre(registerRequest.getUsername())) {
@@ -152,7 +149,6 @@ public class AuthService {
             newUsuario.setPasswordHash(passwordEncoder.encode(registerRequest.getPassword()));
 
             newUsuario.setRol(registerRequest.getRol() != null ? registerRequest.getRol() : "USER");
-
 
 
             usuarioRepository.save(newUsuario);
@@ -177,7 +173,6 @@ public class AuthService {
         return error;
     }
 
-  
 
     private boolean isValidLoginRequest(LoginRequest request) {
         return request != null &&
@@ -196,12 +191,12 @@ public class AuthService {
     }
 
 
-    public void createSystemAdminIfNotExists(){
+    public void createSystemAdminIfNotExists() {
 
 
-        if(usuarioRepository.existsByNombre("SYSTEM")){
+        if (usuarioRepository.existsByNombre("SYSTEM")) {
             log.info("Usuario SYSTEM ya existe");
-        return ;
+            return;
 
         }
         Usuario systemAdmin = new Usuario();

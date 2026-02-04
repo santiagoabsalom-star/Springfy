@@ -24,6 +24,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import java.util.Arrays;
 import java.util.List;
@@ -69,9 +70,9 @@ public class SecurityConfig {
                                         "font-src 'self' data:;"
                         ))))
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter,UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
 
-                .addFilterBefore(loggingFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(loggingFilter, CorsFilter.class )
         ;
         return http.build();
 
@@ -133,7 +134,6 @@ public class SecurityConfig {
     }
 
 
-
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
@@ -155,6 +155,7 @@ public class SecurityConfig {
     public String error() {
         return "error";
     }
+
     @Bean
     public ObjectMapper mapper() {
         return new ObjectMapper();

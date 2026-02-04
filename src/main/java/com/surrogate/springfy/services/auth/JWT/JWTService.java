@@ -67,7 +67,7 @@ public class JWTService {
 
     public Long extractId(String token) {
 
-            return extractClaim(token, claims -> claims.get("id_usuario", Long.class));
+        return extractClaim(token, claims -> claims.get("id_usuario", Long.class));
 
     }
 
@@ -152,8 +152,8 @@ public class JWTService {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-            if(claims.getExpiration().before(new Date())){
-               tokens.remove(token);
+            if (claims.getExpiration().before(new Date())) {
+                tokens.remove(token);
 //               ipToken.remove(token);
 
                 return false;
@@ -205,7 +205,6 @@ public class JWTService {
 
             return "error";
         }
-
 
 
         tokens.remove(token);

@@ -11,6 +11,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     @Query("Select u from Usuario u where u.nombre= :username")
     Usuario findUsuarioByNombre(String username);
+
     boolean existsByNombre(String nombre);
 
 

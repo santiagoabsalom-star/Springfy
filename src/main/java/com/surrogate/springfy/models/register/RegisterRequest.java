@@ -13,7 +13,7 @@ public class RegisterRequest extends Request {
 
 
     private String username;
- private String rol;
+    private String rol;
     private String password;
 
     @JsonCreator

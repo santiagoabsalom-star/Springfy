@@ -8,7 +8,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 
@@ -23,16 +26,17 @@ public class DownloadController {
 
     @PostMapping(value = "/downloadOnCloud", produces = "application/json", consumes = "application/json")
     public ResponseEntity<Response> downloadOnCloud(@RequestBody DownloadRequest request) throws IOException {
-        String videoId= request.videoId();
-        Response response= downloadService.downloadOnCloud(videoId);
+        String videoId = request.videoId();
+        Response response = downloadService.downloadOnCloud(videoId);
         return ResponseEntity.status(response.getHttpCode()).body(response);
     }
-    @PostMapping(value="/downloadOnApp", produces="audio/mpeg", consumes = "application/json")
-    public ResponseEntity<Resource> downloadOnApp(@RequestBody DownloadRequest request) throws IOException {
-        String videoId= request.videoId();
 
-        Resource resource= downloadService.downloadOnApp(videoId);
-        if(resource!=null && resource.exists() ){
+    @PostMapping(value = "/downloadOnApp", produces = "audio/mpeg", consumes = "application/json")
+    public ResponseEntity<Resource> downloadOnApp(@RequestBody DownloadRequest request) throws IOException {
+        String videoId = request.videoId();
+
+        Resource resource = downloadService.downloadOnApp(videoId);
+        if (resource != null && resource.exists()) {
             return new ResponseEntity<>(resource, HttpStatus.OK);
         }
         return new ResponseEntity<>(resource, HttpStatus.NOT_FOUND);

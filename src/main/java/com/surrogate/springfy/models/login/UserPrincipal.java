@@ -57,6 +57,4 @@ public record UserPrincipal(Usuario usuario) implements UserDetailsWithId {
     }
 
 
-
-
 }
