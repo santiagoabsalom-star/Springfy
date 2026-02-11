@@ -24,8 +24,7 @@ public class LoginRequest extends Request {
         this.password = password;
     }
 
-    public LoginRequest() {
-    }
+
 }
 
 

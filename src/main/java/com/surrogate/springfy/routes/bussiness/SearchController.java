@@ -32,9 +32,14 @@ public class SearchController {
 
     }
 
-    @GetMapping(value = "/search-all", produces = "application/json")
+    @GetMapping(value = "/search-all-mp3", produces = "application/json")
     public ResponseEntity<List<AudioDTO>> searchAll() {
-        List<AudioDTO> audioDTOS = searchService.AllInCloud();
+        List<AudioDTO> audioDTOS = searchService.AllInCloudMp3();
+        return ResponseEntity.of(Optional.ofNullable(audioDTOS));
+    }
+    @GetMapping(value="search-all-wav", produces = "application/json")
+    public ResponseEntity<List<AudioDTO>> searchAllWav() {
+        List<AudioDTO> audioDTOS = searchService.AllInCloudWav();
         return ResponseEntity.of(Optional.ofNullable(audioDTOS));
     }
 }

@@ -13,84 +13,131 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import static com.surrogate.springfy.websocket.StreamWebSocketHandler.getFile;
 
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class DownloadService {
+    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final AudioRepository audioRepository;
     String yturl = "https://www.youtube.com/watch?v=";
-    String ruta = "/home/santi/springfyCloud";
+    public static String rutaMp3 = "/home/santi/springfyCloud/mp3/";
+    public static String rutaWav = "/home/santi/springfyCloud/wav/";
     ProcessBuilder processBuilder = new ProcessBuilder();
-
     public Response downloadOnCloud(String videoId) {
         if (audioRepository.existsAudioByAudioId(videoId)) {
             return new Response("error", 409, "El audio ya existe en la nube, no lo descargues devuelta");
         }
 
+
+
         String url = yturl + videoId;
-        processBuilder.command(
+
+        executor.execute(() -> {processBuilder.command(
                 "yt-dlp",
-                "-f", "bestaudio",
+                "-x",
+                "--audio-format", "wav",
                 "--external-downloader", "aria2c",
-                "--external-downloader-args", "-x 32 -k 512M",
-                "-P", ruta,
+                "--external-downloader-args", "aria2c:-x 24 -k 512K",
+                "-P", rutaWav,
                 url
         );
 
-        //Process process = null;
-        try {
-            //    process = processBuilder.start();
-//  BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            //String line;
-            //while ((line = reader.readLine()) != null) {
-            //  System.out.println(line);
-            //}
+            try {
+                processBuilder.start()
+                        .onExit()
+                        .thenAccept(process -> {
+                            if (process.exitValue() == 0) {
+                                try {
 
-            processBuilder.start()
-                    .onExit()
-                    .thenAccept(process -> {
-                        if (process.exitValue() == 0) {
-                            try {
+                                    guardarAudioWav(videoId);
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
 
-                                guardarAudio(videoId);
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
+                            } else {
+                                log.info("YTDLP MODEFOCA FALLO");
                             }
-                        } else {
-                            log.info("YTDLP MODEFOCA FALLO");
-                        }
-                    })
-                    .join();
+                        });
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
 
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+
+    processBuilder.command(
+            "yt-dlp",
+            "-x",
+            "--audio-format", " mp3", "--audio-quality", "0",
+            "--external-downloader", "aria2c",
+            "--external-downloader-args", "aria2c:-x 24 -k 512K",
+            "-P", rutaMp3,
+            url
+    );
+
+
+    //Process process = null;
+    try {
+        //    process = processBuilder.start();
+//  BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        //String line;
+        //while ((line = reader.readLine()) != null) {
+        //  System.out.println(line);
+        //}
+        processBuilder.start()
+                .onExit()
+                .thenAccept(process -> {
+                    if (process.exitValue() == 0) {
+                        try {
+
+                            guardarAudioMp3(videoId);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+
+                    } else {
+                        log.info("Guardar en mp3 fallo");
+                    }
+                })
+                .join();
+
+
+    } catch (IOException e) {
+        throw new RuntimeException(e);
+    }
 
 
         return new Response("success", 200, "Guardado en cloud con exito");
-
 
     }
 
 
     public Resource downloadOnApp(String videoId) {
-        String path = audioRepository.findByAudioId(videoId).getPath();
+        long startTime = System.currentTimeMillis();
+
+        String path = audioRepository.findByAudioMp3Id(videoId, "mp3").getPath();
         if (path == null) {
 
             log.error("No se puede obtener el archivo de audio");
             return null;
         } else {
             Path audio = Paths.get(path);
-            return new FileSystemResource(audio);
+            FileSystemResource file = new FileSystemResource(audio);
+            long stopTime = System.currentTimeMillis();
+            log.info("Tiempo en buscar el archivo de audio fue {} ms", (stopTime - startTime));
+            return file;
+
         }
 
     }
 
-    private void guardarAudio(String videoId) throws IOException {
-        File file = buscarAudio(new File(ruta), videoId);
+    private void guardarAudioMp3(String videoId) throws IOException {
+        File file = buscarAudioMp3(new File(rutaMp3), videoId);
         if (file == null) {
             log.error("Error guardando audio");
         } else {
@@ -101,26 +148,38 @@ public class DownloadService {
             audio.setPath(rutaAudio);
             audio.setNombreaudio(nombre);
             audio.setAudioId(videoId);
-
+            audio.setTipo("mp3");
             audioRepository.save(audio);
         }
 
 
     }
 
-    private File buscarAudio(final File carpeta, String videoId) {
+
+    private void guardarAudioWav( String videoId) throws IOException {
+        File file= buscarAudioWav(new File(rutaWav), videoId);
+        if (file == null) {
+            log.error("Error guardando audio");
+        }
+        else {
+            String rutaAudio = file.getAbsolutePath();
+            String nombre = file.getName();
+            Audio audio = new Audio();
+            audio.setPath(rutaAudio);
+            audio.setNombreaudio(nombre);
+            audio.setAudioId(videoId);
+            audio.setTipo("wav");
+            audioRepository.save(audio);
+        }
+    }
+    private File buscarAudioWav(final File carpeta, String videoId) throws IOException {
+        return getFile(carpeta,videoId,log);
+    }
+    private File buscarAudioMp3(final File carpeta, String videoId) {
 
 
         // se puede optimizar con un hashmap, tipo clave valor, clave=videoId, valor=File ... mas consumo de ram pero menos tiempo de overhead, pq el hashmap se construye al principio de la aplicacion
-        for (final File audio : Objects.requireNonNull(carpeta.listFiles())) {
-            String name = audio.getName();
-            if ((name.endsWith(".mp3") || name.endsWith(".webm") || name.endsWith(".m4a")) && name.contains(videoId)) {
-                return audio;
-            }
-        }
-
-        log.info("No se puede obtener el archivo de audio");
-        return null;
+        return getFile(carpeta, videoId, log);
     }
 
 

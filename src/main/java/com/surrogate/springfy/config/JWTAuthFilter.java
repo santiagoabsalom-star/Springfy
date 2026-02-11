@@ -15,9 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,7 +24,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -51,7 +48,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(@org.jetbrains.annotations.NotNull HttpServletRequest request) {
         String path = request.getRequestURI();
         return path.startsWith("/api/auth/login") || path.startsWith("/api/auth/register") || path.startsWith("/api/search")
-                || path.startsWith("/api/download");
+                || path.startsWith("/api/download") || path.startsWith("/stream");
     }
 
 

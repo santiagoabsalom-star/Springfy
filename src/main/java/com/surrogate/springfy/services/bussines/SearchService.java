@@ -58,15 +58,18 @@ public class SearchService {
                 + "?key=" + key
                 + "&type=video"
                 + "&part=snippet"
-                + "&maxResults=2"
+                + "&maxResults=13"
                 + "&q=";
     }
 
 
-    public List<AudioDTO> AllInCloud() {
+    public List<AudioDTO> AllInCloudMp3() {
 
-        return audioRepository.findAllAudios();
+        return audioRepository.findAllAudiosMp3();
 
+    }
+    public List<AudioDTO> AllInCloudWav() {
+        return audioRepository.findAllAudiosWav();
     }
 
 

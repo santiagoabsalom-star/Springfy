@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Optional;
 
 @Component
 public class LoggingFilter extends OncePerRequestFilter {
@@ -26,15 +25,21 @@ public class LoggingFilter extends OncePerRequestFilter {
         long startTime = System.currentTimeMillis();
 
         String appHeader= request.getHeader("Application-id");
-        String useragent = request.getHeader("User-Agent");
-        if (useragent.toLowerCase().contains("mozilla") || useragent.toLowerCase().contains("chrome") || useragent.toLowerCase().contains("firefox") || useragent.toLowerCase().contains("safari")) {
-            logger.info("Intento de request desde el navegador: {}", useragent);
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        if(request.getHeader("User-Agent")!=null) {
+            String useragent = request.getHeader("User-Agent");
+            if (useragent != null) {
+                if (useragent.toLowerCase().contains("mozilla") || useragent.toLowerCase().contains("chrome") || useragent.toLowerCase().contains("firefox") || useragent.toLowerCase().contains("safari")) {
+                    logger.info("Intento de request desde el navegador: {}", useragent);
+                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 
-            return;
+                    return;
+                }
+            }
         }
         if(!appHeader.equals(AppHeader)) {
+            logger.info("No es igual la fokin id");
             sendError(response);
+
         }
         else {
 

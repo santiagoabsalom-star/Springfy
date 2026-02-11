@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
-
 
 @RestController
 
@@ -25,14 +23,14 @@ public class DownloadController {
     private final DownloadService downloadService;
 
     @PostMapping(value = "/downloadOnCloud", produces = "application/json", consumes = "application/json")
-    public ResponseEntity<Response> downloadOnCloud(@RequestBody DownloadRequest request) throws IOException {
+    public ResponseEntity<Response> downloadOnCloud(@RequestBody DownloadRequest request)  {
         String videoId = request.videoId();
         Response response = downloadService.downloadOnCloud(videoId);
         return ResponseEntity.status(response.getHttpCode()).body(response);
     }
 
     @PostMapping(value = "/downloadOnApp", produces = "audio/mpeg", consumes = "application/json")
-    public ResponseEntity<Resource> downloadOnApp(@RequestBody DownloadRequest request) throws IOException {
+    public ResponseEntity<Resource> downloadOnApp(@RequestBody DownloadRequest request)  {
         String videoId = request.videoId();
 
         Resource resource = downloadService.downloadOnApp(videoId);
