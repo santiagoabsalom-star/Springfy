@@ -32,6 +32,7 @@ public class DownloadController {
     @PostMapping(value = "/downloadOnApp", produces = "audio/mpeg", consumes = "application/json")
     public ResponseEntity<Resource> downloadOnApp(@RequestBody DownloadRequest request)  {
         String videoId = request.videoId();
+        log.info("Intentando descargar el audio con id: {}", videoId);
 
         Resource resource = downloadService.downloadOnApp(videoId);
         if (resource != null && resource.exists()) {

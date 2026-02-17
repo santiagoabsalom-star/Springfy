@@ -14,8 +14,15 @@ public class Comando {
     long segundos;
     @JsonSetter(nulls = Nulls.SKIP)
     String musicId;
+    String seguidor, anfitrion;
 @JsonCreator
-    public Comando(@JsonProperty("comando") String comando, @JsonProperty("segundos") long segundos, @JsonProperty("musicId") String musicId) {
+    public Comando(@JsonProperty("comando") String comando,
+                   @JsonProperty("segundos") long segundos,
+                   @JsonProperty("musicId") String musicId,
+                   @JsonProperty("anfitrion") String anfitrion,
+                   @JsonProperty("seguidor") String seguidor) {
+        this.anfitrion = anfitrion;
+        this.seguidor = seguidor;
     this.comando = comando;
     this.segundos = segundos;
     this.musicId = musicId;

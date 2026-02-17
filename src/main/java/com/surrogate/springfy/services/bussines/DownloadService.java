@@ -119,15 +119,17 @@ public class DownloadService {
 
     public Resource downloadOnApp(String videoId) {
         long startTime = System.currentTimeMillis();
+        log.info("Intentando descargar el audio con id: {}", videoId);
+        Audio audio= audioRepository.findByAudioMp3Id(videoId);
 
-        String path = audioRepository.findByAudioMp3Id(videoId, "mp3").getPath();
+        String path =audio.getPath();
         if (path == null) {
 
             log.error("No se puede obtener el archivo de audio");
             return null;
         } else {
-            Path audio = Paths.get(path);
-            FileSystemResource file = new FileSystemResource(audio);
+            Path pathfile = Paths.get(path);
+            FileSystemResource file = new FileSystemResource(pathfile);
             long stopTime = System.currentTimeMillis();
             log.info("Tiempo en buscar el archivo de audio fue {} ms", (stopTime - startTime));
             return file;

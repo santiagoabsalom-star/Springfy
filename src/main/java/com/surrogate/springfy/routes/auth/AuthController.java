@@ -38,21 +38,12 @@ public class AuthController {
             LoginResponse response = authService.login(loginRequest);
 
             if (response.getHttpCode() == 200) {
-                ResponseCookie cookie = ResponseCookie.from("AUTH_TOKEN", response.getToken())
-                        .httpOnly(true)
-                        .secure(true)
-                        .path("/")
-                        .sameSite("Strict")
-                        .maxAge(Duration.ofMinutes(90))
-                        .build();
+
                 return ResponseEntity.ok()
-
-                        .header(HttpHeaders.SET_COOKIE, cookie.toString())
-
                         .header("X-Content-Type-Options", "nosniff")
                         .header("X-Frame-Options", "DENY")
                         .header("X-XSS-Protection", "1; mode=block")
-                        .body(new LoginResponse(response.getStatus(), "Inicio de sesion exitoso"));
+                        .body(response);
             } else {
                 return ResponseEntity.status(response.getHttpCode())
                         .header("X-Content-Type-Options", "nosniff")

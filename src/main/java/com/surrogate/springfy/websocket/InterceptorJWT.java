@@ -18,7 +18,6 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class InterceptorJWT implements HandshakeInterceptor {
-    private final JWTService jwtService;
     //todo : implementar la validacion del token JWT en el beforeHandshake
     @Override
     public boolean beforeHandshake(@NotNull ServerHttpRequest request, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler, @NotNull Map<String, Object> attributes) throws WebSocketHandshakeException {

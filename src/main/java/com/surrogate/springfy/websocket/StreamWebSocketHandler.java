@@ -31,128 +31,125 @@ import static com.surrogate.springfy.services.bussines.DownloadService.rutaWav;
 @RequiredArgsConstructor
 public class StreamWebSocketHandler implements WebSocketHandler {
     private final ConcurrentMap<String, ClientState> pair = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
   private final ObjectMapper mapper = new ObjectMapper();
     private static final long BYTES_PER_SECOND = 192000;
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws IOException {
         String usuario = (String) session.getAttributes().get("Usuario");
-        String seguidor = (String) session.getAttributes().get("Seguidor");
-        String anfitrion= (String) session.getAttributes().get("Anfitrion");
-        String cancion_id= (String) session.getAttributes().get("Cancion_id");
-
-            if(pair.get(anfitrion)==null && usuario.equals(anfitrion)) {
-                ClientState state = new ClientState(session);
-                state.change= false;
-                state.setStopped(false);
-                state.seguidor= seguidor;
-                state.anfitrion= anfitrion;
-                state.usuario= usuario;
-                state.repeating= false;
-                state.control= new Control();
-                pair.put(usuario, state);
-
-                state.executorService.submit(() -> {
-                    try {
-
-                        Stream(state,cancion_id );
-                    } catch (LineUnavailableException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-            }
-            else if(pair.get(anfitrion).seguidor.equals(seguidor)) {
-                pair.get(anfitrion).setS(session);
-            }
-            else{
-                log.info("No se ha encontrado ninguno de las mierdas que se necesitan");
-                session.close();
-            }
-
-
-
+        if(Objects.nonNull(usuario)) {
+            sessions.put(usuario, session);
+        }
+        else{
+            session.close(new CloseStatus(404, "Usuario no encontrado"));
+        }
     }
-
+//refactor a como se inicia el stream, para poder ver in real time (osea disculpame) que usuario inicio y que usuario es el anfitrion
     @Override
-    public void handleMessage(@NotNull WebSocketSession session, @NotNull WebSocketMessage<?> message) throws IOException, InterruptedException {
-
-        String anfitrion = (String) session.getAttributes().get("Anfitrion");
+    public void handleMessage(@NotNull WebSocketSession session, @NotNull WebSocketMessage<?> message) throws IOException {
         String usuario = (String) session.getAttributes().get("Usuario");
-        if (usuario.equals(anfitrion)) {
-
-            ClientState state = pair.get(usuario);
-            if (state != null) {
-
                 if (message instanceof TextMessage) {
                     String json = (String) message.getPayload();
                     Comando comando = mapper.readValue(json, Comando.class);
                     String command = comando.getComando();
 
-
-                    if (command.equals("stop")) {
-
-                        if (!state.control.pausado) {
-                            state.control.stop();
-                        } else {
-                            log.info("Ya esta pausado mongoloid");
-                        }
-
-                    } else if (command.equals("start")) {
-
-                        if (state.control.pausado) {
-                            state.control.reanudar();
-                        } else {
-                            log.info("Ya esta reanudado mongoloid");
-                        }
-
-                    } else if (command.equals("change")) {
-                        if (state.control.pausado) {
-
-                       state.control.reanudar();
-                    }
-                        state.setChange(true);
+                    if(command.equals("start") && Objects.isNull(pair.get(usuario))){
 
 
-
-                        state.byteOffset = 0;
-
-
-
-
-                        // break en el while y comienza una nueva musica con el mismo metodo;D
-
-                        //mucho mas facil y rapido  que hacer un puto evento y conectar los eventos,
-                        // pero creo que es mas propenso a fallos, si uso bien la logica puede ser potencialmente mas rapido que eventos:D
-
+                        WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
+                        seguidorSession.sendMessage(message);
+                        ClientState state = new ClientState(session);
+                        state.change= false;
+                        state.setStopped(false);
+                        state.seguidor= comando.getSeguidor();
+                        state.anfitrion= comando.getAnfitrion();
+                        state.usuario= usuario;
+                        state.repeating= false;
+                        state.control= new Control();
+                        pair.put(usuario, state);
 
                         state.executorService.submit(() -> {
                             try {
 
-                                Stream(state, comando.getMusicId());
+                                Stream(state, comando.getMusicId() );
                             } catch (LineUnavailableException e) {
                                 throw new RuntimeException(e);
                             }
                         });
-                    } else if (comando.getComando().equals("move")) {
+
+
+                    }
+                    else{
+                        ClientState state = pair.get(usuario);
+                        //Como lo voy a guardar con el anfitrion (primero que se conecte), si seguidor manda mensaje no va a hacer nada pq es null:D
+                        if(state != null && state.anfitrion.equals(usuario)){
+                    if (command.equals("stop")) {
+
+                            if (!state.control.pausado) {
+
+                                state.control.stop();
+
+                            } else {
+                                log.info("Ya esta pausado mongoloid");
+                            }
+
+                        } else if (command.equals("resume")) {
+
+                            if (state.control.pausado) {
+                                state.control.reanudar();
+                            } else {
+                                log.info("Ya esta reanudado mongoloid");
+                            }
+
+                        } else if (command.equals("change")) {
+                            if (state.control.pausado) {
+
+                                state.control.reanudar();
+                            }
+                            state.setChange(true);
+
+
+                            state.byteOffset = 0;
+
+
+                            // break en el while y comienza una nueva musica con el mismo metodo;D
+
+                            //mucho mas facil y rapido  que hacer un puto evento y conectar los eventos,
+                            // pero creo que es mas propenso a fallos, si uso bien la logica puede ser potencialmente mas rapido que eventos:D
+
+
+                            state.executorService.submit(() -> {
+                                try {
+
+                                    Stream(state, comando.getMusicId());
+                                } catch (LineUnavailableException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            });
+                        } else if (comando.getComando().equals("move")) {
 
 //......position esta entre los extremos de la musica, cuando...mover-> position en clientState cambia, siempre entre los valores de la cancion
-                        state.byteOffset = comando.getSegundos() * BYTES_PER_SECOND;
+                            state.byteOffset = comando.getSegundos() * BYTES_PER_SECOND;
 
-                    } else if (comando.getComando().equals("repeat")) {
+                        } else if (comando.getComando().equals("repeat")) {
 
 
                             state.repeating = !state.repeating;
 
-                        log.info("Modo repetir = {}", state.repeating);
+                            log.info("Modo repetir = {}", state.repeating);
+
+                        } else if (comando.getComando().equals("disconnect")) {
+                        //remover state de pair
+                        pair.remove(usuario);
 
                     } else {
-                        log.info("Comando desconocido {}", command);
+                            log.info("Comando desconocido {}", command);
+                        }
+                        }
                     }
                 }
-            }
-        }
-        else{
-            session.close();
-        }
+
+
 
 
     }
@@ -167,20 +164,18 @@ public class StreamWebSocketHandler implements WebSocketHandler {
         try {
             String usuario = (String) session.getAttributes().get("Usuario");
 
-            String anfitrion= (String) session.getAttributes().get("Anfitrion");
+            ClientState cs= pair.get(usuario);
 
-            log.info("Se ha cerrado el usuario {}", usuario);
-            if(anfitrion.equals(usuario)) {
-                if(pair.get(anfitrion).s!=null){
-                pair.get(usuario).s.close();
-                pair.get(usuario).s=null;}
-                pair.remove(anfitrion);
+            if( Objects.nonNull(cs) && cs.anfitrion.equals(usuario)) {
+                if(cs.s!=null) {
+                    cs.s.close();
+                    cs.s = null;
+                    pair.remove(usuario);
+                    sessions.remove(usuario);
+                }
             }
             else {
-                pair.get(anfitrion).s=null;
-                pair.remove(usuario);
-
-
+              sessions.remove(usuario);
             }
         }catch (Exception e) {
             log.error(e.getMessage());
@@ -239,7 +234,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                         BinaryMessage message = new BinaryMessage(Arrays.copyOf(buffer, read));
                         try {
 
-                            if (state.s == null) {
+                            if (state.s == null || !state.s.isOpen()) {
                                 state.a.sendMessage(message);
                             } else {
 
