@@ -1,7 +1,6 @@
 package com.surrogate.springfy.websocket;
 
 
-import com.surrogate.springfy.services.auth.JWT.JWTService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -20,7 +19,7 @@ import java.util.Map;
 public class InterceptorJWT implements HandshakeInterceptor {
     //todo : implementar la validacion del token JWT en el beforeHandshake
     @Override
-    public boolean beforeHandshake(@NotNull ServerHttpRequest request, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler, @NotNull Map<String, Object> attributes) throws WebSocketHandshakeException {
+    public boolean beforeHandshake(@NotNull ServerHttpRequest request, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler, @NotNull Map<String, Object> attributes)  {
 
         String anfitrion= request.getHeaders().getFirst("Anfitrion");
         String usuario= request.getHeaders().getFirst("Usuario");

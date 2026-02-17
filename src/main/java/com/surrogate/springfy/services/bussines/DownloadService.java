@@ -174,7 +174,7 @@ public class DownloadService {
             audioRepository.save(audio);
         }
     }
-    private File buscarAudioWav(final File carpeta, String videoId) throws IOException {
+    private File buscarAudioWav(final File carpeta, String videoId)  {
         return getFile(carpeta,videoId,log);
     }
     private File buscarAudioMp3(final File carpeta, String videoId) {

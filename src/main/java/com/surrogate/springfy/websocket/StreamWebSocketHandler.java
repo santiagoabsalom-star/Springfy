@@ -242,7 +242,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                                 state.s.sendMessage(message);
                             }
                         } catch (IOException e) {
-                            Thread.sleep(30);
+                            Thread.currentThread().interrupt();
                         }
                         long expectedTimeNs = (bytesSentTotal * 1_000_000_000) / BYTES_PER_SECOND;
 
@@ -259,7 +259,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
             }
         } catch(FileNotFoundException e){
                     log.error("Error al leer el archivo de musica INFO={}.", e.getMessage());
-                } catch(InterruptedException | IOException e){
+                } catch(IOException e){
                     throw new RuntimeException(e);
                 } finally{
 
