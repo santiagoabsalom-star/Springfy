@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.surrogate.springfy.models.bussines.streaming.ClientState;
 import com.surrogate.springfy.models.bussines.streaming.Comando;
 import com.surrogate.springfy.models.bussines.streaming.Control;
+import com.surrogate.springfy.repositories.bussines.DuoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -34,12 +35,36 @@ public class StreamWebSocketHandler implements WebSocketHandler {
     private final ConcurrentMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
   private final ObjectMapper mapper = new ObjectMapper();
     private static final long BYTES_PER_SECOND = 192000;
+    private final DuoRepository duoRepository;
+
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws IOException {
         String usuario = (String) session.getAttributes().get("Usuario");
         if(Objects.nonNull(usuario)) {
             sessions.put(usuario, session);
+            if(Objects.isNull(pair.get(usuario))) {
+                String duoUsername = duoRepository.getOtherUsername(usuario);
+                if (duoUsername != null) {
+                    ClientState state = pair.get(duoUsername);
+                    if (Objects.nonNull(state)) {
+                        if(state.started) {
+
+                            Comando comando = new Comando();
+                            comando.setComando("start");
+                            comando.setAnfitrion(state.anfitrion);
+                            comando.setSeguidor(state.seguidor);
+                            comando.setMusicId(state.currentSongId);
+                            String json = mapper.writeValueAsString(comando);
+
+
+                            session.sendMessage(new TextMessage(json));
+                        }
+                    }
+
+                }
+            }
         }
+
         else{
             session.close(new CloseStatus(404, "Usuario no encontrado"));
         }
@@ -54,16 +79,23 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                     String command = comando.getComando();
 
                     if(command.equals("start") && Objects.isNull(pair.get(usuario))){
-
-
                         WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
-                        seguidorSession.sendMessage(message);
+                        if(Objects.nonNull(seguidorSession)) {
+                            seguidorSession.sendMessage(message);
+                        }
                         ClientState state = new ClientState(session);
+
+
+
+
                         state.change= false;
                         state.setStopped(false);
                         state.seguidor= comando.getSeguidor();
                         state.anfitrion= comando.getAnfitrion();
                         state.usuario= usuario;
+
+                        state.started=true;
+                        state.currentSongId=comando.getMusicId();
                         state.repeating= false;
                         state.control= new Control();
                         pair.put(usuario, state);
@@ -80,6 +112,17 @@ public class StreamWebSocketHandler implements WebSocketHandler {
 
                     }
                     else{
+                        if(comando.getComando().equals("connect")){
+                        ClientState state = pair.get(comando.getAnfitrion());
+                        if(state.seguidor.equals(usuario)){
+                            state.s=session;
+                        }
+                        } else if (comando.getComando().equals("follower-disconnect")) {
+                            ClientState state = pair.get(comando.getAnfitrion());
+                            if(state.seguidor.equals(usuario)){
+                                state.s=null;
+                            }
+                        }
                         ClientState state = pair.get(usuario);
                         //Como lo voy a guardar con el anfitrion (primero que se conecte), si seguidor manda mensaje no va a hacer nada pq es null:D
                         if(state != null && state.anfitrion.equals(usuario)){
@@ -96,13 +139,28 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                         } else if (command.equals("resume")) {
 
                             if (state.control.pausado) {
+                                state.startTime = System.nanoTime() -
+                                        ((state.bytesSentTotal * 1_000_000_000L) / BYTES_PER_SECOND);
+
                                 state.control.reanudar();
                             } else {
                                 log.info("Ya esta reanudado mongoloid");
                             }
 
                         } else if (command.equals("change")) {
+                            if(state.s!=null){
+
+                                state.s.sendMessage(message);
+                            }
+                            else {
+                                WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
+                                if (Objects.nonNull(seguidorSession)) {
+                                    seguidorSession.sendMessage(message);
+                                }
+                            }
                             if (state.control.pausado) {
+                                state.startTime = System.nanoTime();
+
 
                                 state.control.reanudar();
                             }
@@ -139,10 +197,18 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                             log.info("Modo repetir = {}", state.repeating);
 
                         } else if (comando.getComando().equals("disconnect")) {
-                        //remover state de pair
+                        if(state.s==null){
+                            WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
+                            if(Objects.nonNull(seguidorSession)){
+                                seguidorSession.sendMessage(message);
+                            }
+                        }else{
+                        state.s.sendMessage(message);
+                        }
                         pair.remove(usuario);
 
-                    } else {
+                    }
+                    else {
                             log.info("Comando desconocido {}", command);
                         }
                         }
@@ -167,14 +233,19 @@ public class StreamWebSocketHandler implements WebSocketHandler {
             ClientState cs= pair.get(usuario);
 
             if( Objects.nonNull(cs) && cs.anfitrion.equals(usuario)) {
+
                 if(cs.s!=null) {
+
                     cs.s.close();
                     cs.s = null;
                     pair.remove(usuario);
                     sessions.remove(usuario);
                 }
+                pair.remove(usuario);
             }
+
             else {
+
               sessions.remove(usuario);
             }
         }catch (Exception e) {
@@ -193,11 +264,11 @@ public class StreamWebSocketHandler implements WebSocketHandler {
         File song = buscarMusica(songId);
 
         try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
-            long bytesSentTotal=0;
+            state.bytesSentTotal=0;
             log.info("Streaming the fukin song: {},{}",song.getName(), song.getPath());
 
                 state.setChange(false);
-            long startTime=System.nanoTime();
+            state.startTime=System.nanoTime();
 
                 while (state.a.isOpen() && !state.isChange()) {
                     if(state.change){
@@ -218,8 +289,8 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                                 state.byteOffset = 0;
                                 raf.seek(state.byteOffset);
                                 read = raf.read(buffer);
-                                bytesSentTotal = 0;
-                                startTime = System.nanoTime();
+                                state.bytesSentTotal = 0;
+                                state.startTime = System.nanoTime();
                                 // si esta repitiendo, la musica termina y se vuelve a reproducir--> caposki
 
                             } else {
@@ -228,7 +299,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
 
                         }
 
-                        bytesSentTotal+=read;
+                        state.bytesSentTotal+=read;
                         state.byteOffset += read;
 
                         BinaryMessage message = new BinaryMessage(Arrays.copyOf(buffer, read));
@@ -244,10 +315,10 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                         } catch (IOException e) {
                             Thread.currentThread().interrupt();
                         }
-                        long expectedTimeNs = (bytesSentTotal * 1_000_000_000) / BYTES_PER_SECOND;
+                        long expectedTimeNs = (state.bytesSentTotal * 1_000_000_000) / BYTES_PER_SECOND;
 
 
-                        long realTimeNs = System.nanoTime() - startTime;
+                        long realTimeNs = System.nanoTime() - state.startTime;
                         long delayNs = expectedTimeNs - realTimeNs;
                         if (delayNs > 0) {
                             LockSupport.parkNanos(delayNs);

@@ -16,9 +16,12 @@ public class ClientState {
     public  WebSocketSession a;
     public ExecutorService executorService = Executors.newSingleThreadExecutor();
     public  WebSocketSession s;
+    public long bytesSentTotal;
     private volatile boolean stopped;
+    public volatile long startTime;
     public volatile long byteOffset = 0;
-
+    public volatile boolean started;
+    public String currentSongId;
     public Control control;
     public volatile boolean change;
     public volatile boolean repeating;

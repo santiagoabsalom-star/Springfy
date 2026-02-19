@@ -20,17 +20,13 @@ public class InterceptorJWT implements HandshakeInterceptor {
     @Override
     public boolean beforeHandshake(@NotNull ServerHttpRequest request, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler, @NotNull Map<String, Object> attributes)  {
 
-        String anfitrion= request.getHeaders().getFirst("Anfitrion");
+
         String usuario= request.getHeaders().getFirst("Usuario");
-        String seguidor= request.getHeaders().getFirst("Seguidor");
-        assert anfitrion != null;
-        if(anfitrion.equals(usuario)){
-        String cancion_id= request.getHeaders().getFirst("Cancion_id");
-        attributes.put("Cancion_id", cancion_id);
-        }
+
+        assert usuario != null;
+
         attributes.put("Usuario", usuario);
-        attributes.put("Seguidor", seguidor);
-        attributes.put("Anfitrion", anfitrion);
+
 
         return true;
 

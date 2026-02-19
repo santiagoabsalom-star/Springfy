@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
@@ -13,6 +15,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Usuario findUsuarioByNombre(String username);
 
     boolean existsByNombre(String nombre);
-
-
+    @Query("Select u.nombre from Usuario u where u.nombre!= :username")
+    List<String> getAllNombres(String username);
 }
