@@ -95,6 +95,7 @@ public class SecurityConfig {
                 "http://127.0.0.1:5173",
                 "http://192.168.0.45:5173",
                 "http://localhost:5174",
+                "http://localhost:8080",
                 "http:/192,168.0.45",
                 "null",
                 "http://172.18.0.1:5173",
@@ -117,7 +118,7 @@ public class SecurityConfig {
                 "X-Requested-With"
 
         ));
-        configuration.setExposedHeaders(List.of("Authorization", "Id-Usuario", "Nombre-Usuario"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 

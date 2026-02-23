@@ -56,7 +56,6 @@ public class StreamingController {
 
             return null;
         }
-        log.info(request.getHeader("Authorization"));
 
         return request.getHeader("Authorization").substring(7);
     }

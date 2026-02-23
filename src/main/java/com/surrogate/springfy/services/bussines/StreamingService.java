@@ -23,10 +23,12 @@ public class StreamingService {
 
     public String getDuoByUsername(String token){
     String username= getUsernameFromToken(token);
-    return duoRepository.getOtherUsername(username);
-
+    if(username==null){
+        return null;
     }
 
+        return duoRepository.getOtherUsername(username);
+    }
     private String getUsernameFromToken(String token) {
 
         return jwtService.extractUsername(token);

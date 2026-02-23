@@ -18,6 +18,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,7 +37,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
     private final ConcurrentMap<String, ClientState> pair = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
   private final ObjectMapper mapper = new ObjectMapper();
-    private static final long BYTES_PER_SECOND = 192000;
+    private static final int BYTES_PER_SECOND = 192000;
     private final DuoRepository duoRepository;
 
     @Override
@@ -80,6 +83,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
 
                     if(command.equals("start") && Objects.isNull(pair.get(usuario))){
                         WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
+                        log.info("Es null? {}", Objects.isNull(seguidorSession) ? "Si" : "No");
                         if(Objects.nonNull(seguidorSession)) {
                             seguidorSession.sendMessage(message);
                         }
@@ -198,6 +202,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
 
                         } else if (comando.getComando().equals("disconnect")) {
                         if(state.s==null){
+
                             WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
                             if(Objects.nonNull(seguidorSession)){
                                 seguidorSession.sendMessage(message);
@@ -205,8 +210,13 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                         }else{
                         state.s.sendMessage(message);
                         }
-                        pair.remove(usuario);
 
+                        state.s=null;
+                        state.a=null;
+                        state.anfitrion=null;
+                        state.seguidor=null;
+                        state.setStopped(true);
+                        pair.remove(usuario);
                     }
                     else {
                             log.info("Comando desconocido {}", command);
@@ -214,7 +224,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                         }
                     }
                 }
-
+//si se desconecta ahora ya no se desconecta de la sesion si no del clientstate
 
 
 
@@ -259,71 +269,147 @@ public class StreamWebSocketHandler implements WebSocketHandler {
     }
 //funcion que tengo que cambiar y optimizar-> abrir el archivo y enviarlo en bytes
     private void Stream(ClientState state, String songId) throws LineUnavailableException {
-
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
 
         File song = buscarMusica(songId);
+// se puede dividir el file en las partes, con algoritmo de que acepte peso y duracion de la song:D por ejemplo 90 segundos y 30 megas, aprox 9000 partes
+        //refactor metiendo todo el archivo en memoria: antes= disco->kernel->jvm->enviar, ahora disco->kernel->memoria(guardandotodo el archivo en memoria)->jvm->enviar
 
-        try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
+try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
+
+
+
+
             state.bytesSentTotal=0;
             log.info("Streaming the fukin song: {},{}",song.getName(), song.getPath());
 
                 state.setChange(false);
             state.startTime=System.nanoTime();
+    final long MAPPED_THRESHOLD = 200L * 1024 * 1024; // 200MB
+    final int DEFAULT_CHUNK = 4096;
 
-                while (state.a.isOpen() && !state.isChange()) {
-                    if(state.change){
-                        break;
-                    }
+    long fileSize = raf.length();
 
-
-                    state.control.esperarSiEstaPausado();
-
-                        raf.seek(state.byteOffset);
-                        byte[] buffer = new byte[4096];
-
-                        int read = raf.read(buffer);
-                        if (read <= 0) {
-
-                            if (state.repeating) {
-                                log.info("Repitiendo musica");
-                                state.byteOffset = 0;
-                                raf.seek(state.byteOffset);
-                                read = raf.read(buffer);
-                                state.bytesSentTotal = 0;
-                                state.startTime = System.nanoTime();
-                                // si esta repitiendo, la musica termina y se vuelve a reproducir--> caposki
-
-                            } else {
-                                break;
-                            }
-
-                        }
-
-                        state.bytesSentTotal+=read;
-                        state.byteOffset += read;
-
-                        BinaryMessage message = new BinaryMessage(Arrays.copyOf(buffer, read));
-                        try {
-
-                            if (state.s == null || !state.s.isOpen()) {
-                                state.a.sendMessage(message);
-                            } else {
-
-                                state.a.sendMessage(message);
-                                state.s.sendMessage(message);
-                            }
-                        } catch (IOException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                        long expectedTimeNs = (state.bytesSentTotal * 1_000_000_000) / BYTES_PER_SECOND;
+    if (fileSize > MAPPED_THRESHOLD) {
 
 
-                        long realTimeNs = System.nanoTime() - state.startTime;
-                        long delayNs = expectedTimeNs - realTimeNs;
-                        if (delayNs > 0) {
-                            LockSupport.parkNanos(delayNs);
-                        }
-                }try {
+
+        while (state.a.isOpen() && !state.isChange()) {
+
+            if (state.change) break;
+            if (state.isStopped()) break;
+
+            state.control.esperarSiEstaPausado();
+
+            raf.seek(state.byteOffset);
+
+            byte[] buffer = new byte[DEFAULT_CHUNK];
+            int read = raf.read(buffer);
+
+            if (read <= 0) {
+
+                if (state.repeating) {
+                    log.info("Repitiendo musica");
+                    state.byteOffset = 0;
+                    state.bytesSentTotal = 0;
+                    state.startTime = System.nanoTime();
+                    continue;
+                } else {
+                    break;
+                }
+            }
+
+            state.bytesSentTotal += read;
+            state.byteOffset += read;
+
+            BinaryMessage message =
+                    new BinaryMessage(ByteBuffer.wrap(buffer, 0, read));
+
+            try {
+                if (state.s == null || !state.s.isOpen()) {
+                    state.a.sendMessage(message);
+                } else {
+                    state.a.sendMessage(message);
+                    state.s.sendMessage(message);
+                }
+            } catch (IOException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+
+            long expectedTimeNs =
+                    (state.bytesSentTotal * 1_000_000_000L) / BYTES_PER_SECOND;
+
+            long realTimeNs = System.nanoTime() - state.startTime;
+            long delayNs = expectedTimeNs - realTimeNs;
+
+            if (delayNs > 0) {
+                LockSupport.parkNanos(delayNs);
+            }
+        }
+
+    } else {
+
+
+        MappedByteBuffer mapperBuffer =
+                raf.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, fileSize);
+
+        while (state.a.isOpen() && !state.isChange()) {
+
+            if (state.change) break;
+            if (state.isStopped()) break;
+            state.control.esperarSiEstaPausado();
+
+            if (state.byteOffset >= fileSize) {
+
+                if (state.repeating) {
+                    log.info("Repitiendo musica");
+                    state.byteOffset = 0;
+                    state.bytesSentTotal = 0;
+                    state.startTime = System.nanoTime();
+                } else {
+                    break;
+                }
+            }
+
+            int remaining = (int)(fileSize - state.byteOffset);
+            int chunkSize = Math.min(DEFAULT_CHUNK, remaining);
+
+            ByteBuffer slice = mapperBuffer
+                    .duplicate()
+                    .position((int) state.byteOffset)
+                    .limit((int) state.byteOffset + chunkSize)
+                    .slice()
+                    .asReadOnlyBuffer();
+
+            state.bytesSentTotal += chunkSize;
+            state.byteOffset += chunkSize;
+
+            BinaryMessage message = new BinaryMessage(slice);
+
+            try {
+                if (state.s == null || !state.s.isOpen()) {
+                    state.a.sendMessage(message);
+                } else {
+                    state.a.sendMessage(message);
+                    state.s.sendMessage(message);
+                }
+            } catch (IOException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+
+            long expectedTimeNs =
+                    (state.bytesSentTotal * 1_000_000_000L) / BYTES_PER_SECOND;
+
+            long realTimeNs = System.nanoTime() - state.startTime;
+            long delayNs = expectedTimeNs - realTimeNs;
+
+            if (delayNs > 0) {
+                LockSupport.parkNanos(delayNs);
+            }
+        }
+    }try {
                 Thread.currentThread().interrupt();
             }catch (RuntimeException e) {
                     log.error(e.getMessage());
@@ -340,11 +426,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
 
 
 
-        // Aca el audio y lo mandamos como bytes mientras la musica no haya terminado con PartialMessages, algo como: si el usuario pausa o se para la cancion(En este caso el cliente pide otra cancion y se reproduce, igual que cunado pide otra cancion), isLastMessage=true
-        //luego para los distintos movimientos, por ejemplo adelantar la musica o atrasarla, aca el mensaje va a tener el byte, la opcion y la cantidad de segundos que se adelanto o se atraso
-        // es decir partecancion= cancion + o - segundos que se adelanto o se atraso, - para atrasar y + mas para adelantar:D
-        //
-        // }
+
 
 
     }

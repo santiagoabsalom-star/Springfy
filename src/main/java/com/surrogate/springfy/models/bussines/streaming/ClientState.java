@@ -5,21 +5,20 @@ import lombok.Setter;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
+
 @Getter
 @Setter
 
 public class ClientState {
     public  WebSocketSession a;
-    public ExecutorService executorService = Executors.newSingleThreadExecutor();
+    public ExecutorService executorService = Executors.newSingleThreadExecutor(Thread.ofVirtual().factory());
+
     public  WebSocketSession s;
     public long bytesSentTotal;
     private volatile boolean stopped;
     public volatile long startTime;
-    public volatile long byteOffset = 0;
+    public volatile int byteOffset = 0;
     public volatile boolean started;
     public String currentSongId;
     public Control control;
