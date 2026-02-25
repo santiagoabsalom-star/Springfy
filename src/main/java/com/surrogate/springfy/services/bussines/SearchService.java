@@ -3,6 +3,7 @@ package com.surrogate.springfy.services.bussines;
 import com.surrogate.springfy.models.DTO.AudioDTO;
 import com.surrogate.springfy.models.YT.SearchResponse;
 import com.surrogate.springfy.models.YT.YouTubeSearchResponse;
+import com.surrogate.springfy.models.YT.YouTubeVideosResponse;
 import com.surrogate.springfy.repositories.bussines.AudioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,8 +12,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -31,7 +35,6 @@ public class SearchService {
     public SearchResponse searchByNombre(String nombre) {
         String newUrl = buildUrl() + nombre;
 
-
         YouTubeSearchResponse ytSearchResponse = httpClient.get()
                 .uri(newUrl)
                 .retrieve()
@@ -39,18 +42,64 @@ public class SearchService {
                 .onErrorResume(e -> Mono.empty())
                 .block();
 
-        if(ytSearchResponse == null) {
+        if (ytSearchResponse == null) {
             return null;
         }
-        List<SearchResponse.VideoInfo> videoInfos = new ArrayList<>();
-        ytSearchResponse.items().forEach(item -> {
-            SearchResponse.VideoInfo videoInfo = new SearchResponse.VideoInfo(item.id().videoId(), item.snippet().title(), item.snippet().channelTitle()
-            );
-            videoInfos.add(videoInfo);
 
+        List<String> ids = ytSearchResponse.items().stream()
+                .map(item -> item.id().videoId())
+                .toList();
+
+        if (ids.isEmpty()) {
+            return new SearchResponse(List.of());
+        }
+
+        String detailsUrl = buildVideoDetailsUrl(ids);
+
+
+        YouTubeVideosResponse detailsResponse = httpClient.get()
+                .uri(detailsUrl)
+                .retrieve()
+                .bodyToMono(YouTubeVideosResponse.class)
+                .block();
+
+        if (detailsResponse == null) {
+            return null;
+        }
+
+        Map<String, Long> durationMap = new HashMap<>();
+
+        detailsResponse.items().forEach(item -> {
+            String videoId = item.id();
+            String isoDuration = item.contentDetails().duration();
+
+            long seconds = Duration.parse(isoDuration).getSeconds();
+            durationMap.put(videoId, seconds);
         });
-        return new SearchResponse(videoInfos);
 
+        List<SearchResponse.VideoInfo> videoInfos = ytSearchResponse.items().stream()
+                .filter(item -> {
+                    Long duration = durationMap.get(item.id().videoId());
+                    return duration != null && duration <= 5400;
+                })
+                .map(item -> new SearchResponse.VideoInfo(
+                        item.id().videoId(),
+                        item.snippet().title(),
+                        item.snippet().channelTitle()
+                ))
+                .toList();
+
+        return new SearchResponse(videoInfos);
+    }
+
+    public String buildVideoDetailsUrl(List<String> ids) {
+
+        String idsString = String.join(",", ids);
+
+        return "https://www.googleapis.com/youtube/v3/videos"
+                + "?key=" + key
+                + "&part=contentDetails"
+                + "&id=" + idsString;
     }
 
     public String buildUrl() {

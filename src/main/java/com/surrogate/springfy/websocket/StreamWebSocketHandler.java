@@ -1,5 +1,7 @@
 package com.surrogate.springfy.websocket;
 
+import ch.qos.logback.core.net.server.Client;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.surrogate.springfy.models.bussines.streaming.ClientState;
 import com.surrogate.springfy.models.bussines.streaming.Comando;
@@ -10,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 
@@ -21,49 +25,63 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import java.util.concurrent.locks.LockSupport;
 
 import static com.surrogate.springfy.services.bussines.DownloadService.rutaWav;
 
 @Component
 @Slf4j
+@EnableScheduling
 @RequiredArgsConstructor
 public class StreamWebSocketHandler implements WebSocketHandler {
     private final ConcurrentMap<String, ClientState> pair = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
   private final ObjectMapper mapper = new ObjectMapper();
+    private final Map<String, Long> lastPong = new ConcurrentHashMap<>();
     private static final int BYTES_PER_SECOND = 192000;
     private final DuoRepository duoRepository;
 
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws IOException {
         String usuario = (String) session.getAttributes().get("Usuario");
+        log.info("Usuario en sesion es: {} ",  usuario);
         if(Objects.nonNull(usuario)) {
+
+            lastPong.put(session.getId(), System.currentTimeMillis());
             sessions.put(usuario, session);
+
             if(Objects.isNull(pair.get(usuario))) {
                 String duoUsername = duoRepository.getOtherUsername(usuario);
                 if (duoUsername != null) {
-                    ClientState state = pair.get(duoUsername);
-                    if (Objects.nonNull(state)) {
-                        if(state.started) {
-
-                            Comando comando = new Comando();
-                            comando.setComando("start");
-                            comando.setAnfitrion(state.anfitrion);
-                            comando.setSeguidor(state.seguidor);
-                            comando.setMusicId(state.currentSongId);
-                            String json = mapper.writeValueAsString(comando);
 
 
-                            session.sendMessage(new TextMessage(json));
+                    WebSocketSession duo = sessions.get(duoUsername);
+
+                    if(Objects.nonNull(duo)) {
+                        Comando comando = new Comando();
+                        comando.setComando("duo-connected");
+                        String json = mapper.writeValueAsString(comando);
+                        duo.sendMessage(new TextMessage(json));
+
+                        ClientState state = pair.get(duoUsername);
+                        if (Objects.nonNull(state)) {
+                            if (state.started) {
+                                log.info("Avisando a {} que ya esta iniciado el musica" ,usuario);
+
+                                Comando command = new Comando();
+                                command.setComando("start");
+                                command.setAnfitrion(state.anfitrion);
+                                command.setSeguidor(state.seguidor);
+                                command.setMusicId(state.currentSongId);
+                                String sw = mapper.writeValueAsString(command);
+                                session.sendMessage(new TextMessage(sw));
+                            }
                         }
                     }
-
                 }
             }
         }
@@ -80,7 +98,23 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                     String json = (String) message.getPayload();
                     Comando comando = mapper.readValue(json, Comando.class);
                     String command = comando.getComando();
+                    if(command.equals("is-duo-connected")) {
+                        log.info("Recibida la verificacion de conexion de duo");
+                        String duoUsername = duoRepository.getOtherUsername(usuario);
+                        if (duoUsername != null) {
+                            if (sessions.containsKey(duoUsername)) {
+                                Comando commando = new Comando();
+                                commando.setComando("duo-connected");
+                                String js = mapper.writeValueAsString(commando);
+                                log.info("Enviando verificacion de conexion de duo");
+                                log.info(comando.getComando());
+                                session.sendMessage(new TextMessage(js));
+                            }
+                            return;
+                        }
+                        return;
 
+                    }
                     if(command.equals("start") && Objects.isNull(pair.get(usuario))){
                         WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
                         log.info("Es null? {}", Objects.isNull(seguidorSession) ? "Si" : "No");
@@ -108,7 +142,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                             try {
 
                                 Stream(state, comando.getMusicId() );
-                            } catch (LineUnavailableException e) {
+                            } catch (LineUnavailableException | IOException e) {
                                 throw new RuntimeException(e);
                             }
                         });
@@ -116,21 +150,24 @@ public class StreamWebSocketHandler implements WebSocketHandler {
 
                     }
                     else{
-                        if(comando.getComando().equals("connect")){
+                        if(comando.getComando().equals("follower-connect")){
                         ClientState state = pair.get(comando.getAnfitrion());
                         if(state.seguidor.equals(usuario)){
+                            state.a.sendMessage(message);
                             state.s=session;
                         }
                         } else if (comando.getComando().equals("follower-disconnect")) {
                             ClientState state = pair.get(comando.getAnfitrion());
                             if(state.seguidor.equals(usuario)){
+                                state.a.sendMessage(message);
                                 state.s=null;
+
                             }
                         }
                         ClientState state = pair.get(usuario);
                         //Como lo voy a guardar con el anfitrion (primero que se conecte), si seguidor manda mensaje no va a hacer nada pq es null:D
                         if(state != null && state.anfitrion.equals(usuario)){
-                    if (command.equals("stop")) {
+                        if (command.equals("stop")) {
 
                             if (!state.control.pausado) {
 
@@ -184,7 +221,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                                 try {
 
                                     Stream(state, comando.getMusicId());
-                                } catch (LineUnavailableException e) {
+                                } catch (LineUnavailableException | IOException e) {
                                     throw new RuntimeException(e);
                                 }
                             });
@@ -208,7 +245,9 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                                 seguidorSession.sendMessage(message);
                             }
                         }else{
-                        state.s.sendMessage(message);
+                            if(state.s.isOpen()) {
+                                state.s.sendMessage(message);
+                            }
                         }
 
                         state.s=null;
@@ -238,26 +277,69 @@ public class StreamWebSocketHandler implements WebSocketHandler {
     @Override
     public void afterConnectionClosed(@NotNull WebSocketSession session, @NotNull CloseStatus closeStatus) {
         try {
+
             String usuario = (String) session.getAttributes().get("Usuario");
-
+            log.info("Cerrando sesion de usuario {}", usuario);
             ClientState cs= pair.get(usuario);
+            Comando comando= new Comando();
+            comando.setComando("duo-disconnected");
+            String co= mapper.writeValueAsString(comando);
 
+            TextMessage message2 = new TextMessage(co);
+            String duo= duoRepository.getOtherUsername(usuario);
+            WebSocketSession duoSession = sessions.get(duo);
+            if (Objects.nonNull(duoSession)) {
+                duoSession.sendMessage(message2);
+            }
             if( Objects.nonNull(cs) && cs.anfitrion.equals(usuario)) {
+                Comando comand = new Comando();
+
+                comand.setComando("disconnect");
+                String kd = mapper.writeValueAsString(comand);
+                TextMessage message = new TextMessage(kd);
 
                 if(cs.s!=null) {
+                    log.info("Avisando a follower conectado ");
 
-                    cs.s.close();
+
+                    cs.s.sendMessage(message);
+
                     cs.s = null;
                     pair.remove(usuario);
                     sessions.remove(usuario);
+
+                }
+
+                WebSocketSession seguidorSession = sessions.get(cs.seguidor);
+                if (Objects.nonNull(seguidorSession)) {
+                    seguidorSession.sendMessage(message2);
+                seguidorSession.sendMessage(message);
+                    log.info("Avisando a follower desconectado ");
+
                 }
                 pair.remove(usuario);
+                sessions.remove(usuario);
             }
 
             else {
+                    String name= duoRepository.getOtherUsername(usuario);
+                ClientState state=pair.get(name);
+                if(state!=null && state.a.isOpen()){
+                    Comando comand = new Comando();
 
-              sessions.remove(usuario);
-            }
+                    log.info("Avisando a anfitrion");
+                    comand.setComando("follower-disconnect");
+                    String kd = mapper.writeValueAsString(comand);
+                    TextMessage message = new TextMessage(kd);
+                    state.a.sendMessage(message);
+
+                }
+
+
+                    sessions.remove(usuario);
+
+                }
+
         }catch (Exception e) {
             log.error(e.getMessage());
         }
@@ -268,7 +350,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
         return true;
     }
 //funcion que tengo que cambiar y optimizar-> abrir el archivo y enviarlo en bytes
-    private void Stream(ClientState state, String songId) throws LineUnavailableException {
+    private void Stream(ClientState state, String songId) throws LineUnavailableException, IOException {
         Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
 
         File song = buscarMusica(songId);
@@ -327,16 +409,29 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
 
             try {
                 if (state.s == null || !state.s.isOpen()) {
+                    if(state.a.isOpen()){
                     state.a.sendMessage(message);
+                    }
                 } else {
-                    state.a.sendMessage(message);
-                    state.s.sendMessage(message);
-                }
+                    if(state.a.isOpen()) {
+                        state.a.sendMessage(message);
+                        state.s.sendMessage(message);
+                    }
+                    }
             } catch (IOException e) {
-                Thread.currentThread().interrupt();
-                break;
-            }
 
+                state.a.close();
+                state.a = null;
+
+                if (state.s != null) {
+                    state.s.close();
+                    state.s = null;
+                    Thread.currentThread().interrupt();
+                    pair.remove(state.anfitrion);
+                    break;
+
+                }
+            }
             long expectedTimeNs =
                     (state.bytesSentTotal * 1_000_000_000L) / BYTES_PER_SECOND;
 
@@ -362,12 +457,17 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
 
             if (state.byteOffset >= fileSize) {
 
+
                 if (state.repeating) {
                     log.info("Repitiendo musica");
                     state.byteOffset = 0;
                     state.bytesSentTotal = 0;
                     state.startTime = System.nanoTime();
                 } else {
+                    Comando comando = new Comando();
+                    comando.setComando("finished");
+                    String json = mapper.writeValueAsString(comando);
+                    state.a.sendMessage(new TextMessage(json));
                     break;
                 }
             }
@@ -377,8 +477,8 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
 
             ByteBuffer slice = mapperBuffer
                     .duplicate()
-                    .position((int) state.byteOffset)
-                    .limit((int) state.byteOffset + chunkSize)
+                    .position( state.byteOffset)
+                    .limit( state.byteOffset + chunkSize)
                     .slice()
                     .asReadOnlyBuffer();
 
@@ -410,9 +510,11 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
             }
         }
     }try {
+
                 Thread.currentThread().interrupt();
             }catch (RuntimeException e) {
                     log.error(e.getMessage());
+
             }
         } catch(FileNotFoundException e){
                     log.error("Error al leer el archivo de musica INFO={}.", e.getMessage());
@@ -422,6 +524,7 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
 
 
                     log.info("Se ha cerrado el archivo de musica.");
+
                 }
 
 
@@ -430,6 +533,7 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
 
 
     }
+
 
     private File buscarMusica( String videoId) {
 
