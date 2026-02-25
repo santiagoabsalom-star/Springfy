@@ -1,7 +1,5 @@
 package com.surrogate.springfy.websocket;
 
-import ch.qos.logback.core.net.server.Client;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.surrogate.springfy.models.bussines.streaming.ClientState;
 import com.surrogate.springfy.models.bussines.streaming.Comando;
@@ -13,7 +11,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 
