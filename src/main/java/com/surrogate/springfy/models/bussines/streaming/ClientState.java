@@ -24,7 +24,9 @@ public class ClientState {
     public volatile int byteOffset = 0;
     public volatile boolean started;
     public String currentSongId;
+    public int currentPosition;
     public Control control;
+    public int currentSongDuration;
     public volatile boolean change;
     public volatile boolean repeating;
     //todo hacer todos los atributos atomicos

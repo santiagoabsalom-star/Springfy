@@ -12,23 +12,38 @@ import lombok.Setter;
 public class Comando {
     String comando;
     @JsonSetter(nulls = Nulls.SKIP)
-    int segundos;
+    int segundosToMove;
+    @JsonSetter(nulls = Nulls.SKIP)
+    int currentPosition;
     @JsonSetter(nulls = Nulls.SKIP)
     String musicId;
+    @JsonSetter(nulls = Nulls.SKIP)
+            int duration;
+
+    @JsonSetter(nulls = Nulls.SKIP)
+            @JsonProperty("isPlaying")
+            boolean playing;
     String seguidor, anfitrion;
 @JsonCreator
     public Comando(@JsonProperty("comando") String comando,
-                   @JsonProperty("segundos") int segundos,
+                   @JsonProperty("isPlaying") boolean playing,
+                   @JsonProperty("duration") int duration,
+                   @JsonProperty("currentPosition") int currentPosition,
+                   @JsonProperty("segundosToMove") int segundos,
                    @JsonProperty("musicId") String musicId,
                    @JsonProperty("anfitrion") String anfitrion,
                    @JsonProperty("seguidor") String seguidor) {
         this.anfitrion = anfitrion;
         this.seguidor = seguidor;
     this.comando = comando;
-    this.segundos =  segundos;
+    this.duration = duration;
+    this.segundosToMove =  segundos;
+    this.playing = playing;
+    this.currentPosition = currentPosition;
     this.musicId = musicId;
 }
-public Comando() {}
+
+    public Comando() {}
 
 
 
