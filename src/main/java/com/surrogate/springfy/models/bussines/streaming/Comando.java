@@ -23,9 +23,13 @@ public class Comando {
     @JsonSetter(nulls = Nulls.SKIP)
             @JsonProperty("isPlaying")
             boolean playing;
+    @JsonSetter(nulls = Nulls.SKIP)
+    @JsonProperty("isRepeating")
+    boolean repeating;
     String seguidor, anfitrion;
 @JsonCreator
     public Comando(@JsonProperty("comando") String comando,
+                   @JsonProperty("isRepeating") boolean repeating,
                    @JsonProperty("isPlaying") boolean playing,
                    @JsonProperty("duration") int duration,
                    @JsonProperty("currentPosition") int currentPosition,
@@ -36,6 +40,7 @@ public class Comando {
         this.anfitrion = anfitrion;
         this.seguidor = seguidor;
     this.comando = comando;
+    this.repeating = repeating;
     this.duration = duration;
     this.segundosToMove =  segundos;
     this.playing = playing;

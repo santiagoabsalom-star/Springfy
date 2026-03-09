@@ -76,6 +76,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                                 command.setPlaying(!state.control.pausado);
                                 command.setAnfitrion(state.anfitrion);
                                 command.setSeguidor(state.seguidor);
+                                command.setRepeating(state.repeating);
                                 command.setMusicId(state.currentSongId);
                                 command.setCurrentPosition(state.currentPosition);
                                 String sw = mapper.writeValueAsString(command);
@@ -273,7 +274,14 @@ public class StreamWebSocketHandler implements WebSocketHandler {
 
 
                             state.repeating = !state.repeating;
-
+                            if(state.s!=null){
+                                state.s.sendMessage(message);
+                            }else{
+                                WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
+                                if (Objects.nonNull(seguidorSession)) {
+                                    seguidorSession.sendMessage(message);
+                                }
+                            }
                             log.info("Modo repetir = {}", state.repeating);
 
                         } else if (comando.getComando().equals("disconnect")) {
@@ -352,7 +360,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                     }
                     cs.s = null;
                     try {
-                        log.info("Intentando remover el clientState con usuario {}", usuario);
+
                         pair.remove(usuario);
                         log.info("Removido con exito");
                         log.info("Intentando remover sesion de usuario {}", usuario);
@@ -483,9 +491,31 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
 
                 if (state.repeating) {
                     log.info("Repitiendo musica");
+                    try {
+
                     state.byteOffset = 0;
                     state.bytesSentTotal = 0;
                     state.startTime = System.nanoTime();
+                    Comando comando = new Comando();
+                    comando.setComando("repeating");
+                    TextMessage message = new TextMessage(mapper.writeValueAsString(comando));
+
+                        state.a.sendMessage(message);
+
+                        log.info("Comando enviado al anfitrion");
+
+                    if(state.s!=null) {
+                        state.s.sendMessage(message);
+                    }
+                    else{
+                        WebSocketSession seguidorSession = sessions.get(state.seguidor);
+                        if (Objects.nonNull(seguidorSession)) {
+                            seguidorSession.sendMessage(message);
+                        }
+                    }
+                }catch (Exception e){
+                    log.info(e.getMessage());
+                }
                     continue;
                 } else {
                     Comando comando = new Comando();
@@ -559,11 +589,45 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
 
 
 
+
                 if (state.repeating) {
                     log.info("Repitiendo musica");
-                    state.byteOffset = 0;
-                    state.bytesSentTotal = 0;
-                    state.startTime = System.nanoTime();
+                    try {
+
+                        state.byteOffset = 0;
+                        state.bytesSentTotal = 0;
+                        state.startTime = System.nanoTime();
+                        Comando comando = new Comando();
+                        comando.setComando("repeating");
+                        TextMessage message = new TextMessage(mapper.writeValueAsString(comando));
+
+                        state.a.sendMessage(message);
+
+                        log.info("Comando enviado al anfitrion");
+// Ya que usamos mucho esta logica, la podemos pasar a funcion,pero ahora no lo voy a hacer algo como void sendMessageToFollower(ClientState state, Comando comando){
+                        //TextMessage message = new TextMessage(mapper.writeValueAsString(comando));
+//    if(state.s!=null) {
+//                            state.s.sendMessage(message);
+//                        }
+//                        else{
+//                            WebSocketSession seguidorSession = sessions.get(state.seguidor);
+//                            if (Objects.nonNull(seguidorSession)) {
+//                                seguidorSession.sendMessage(message);
+//                            }
+//                        }};
+                        if(state.s!=null) {
+                            state.s.sendMessage(message);
+                        }
+                        else{
+                            WebSocketSession seguidorSession = sessions.get(state.seguidor);
+                            if (Objects.nonNull(seguidorSession)) {
+                                seguidorSession.sendMessage(message);
+                            }
+                        }
+                    }catch (Exception e){
+                        log.info(e.getMessage());
+                    }
+                    continue;
                 } else {
                     Comando comando = new Comando();
                     comando.setComando("finished");
