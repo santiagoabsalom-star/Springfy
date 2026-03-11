@@ -1,10 +1,12 @@
 package com.surrogate.springfy.models.bussines.streaming;
 
+import com.surrogate.springfy.models.DTO.AudioDTO;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,6 +29,7 @@ public class ClientState {
     public int currentPosition;
     public Control control;
     public int currentSongDuration;
+    public List<String> currentPlaylist;
     public volatile boolean change;
     public volatile boolean repeating;
     //todo hacer todos los atributos atomicos

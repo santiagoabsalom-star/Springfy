@@ -78,6 +78,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                                 command.setSeguidor(state.seguidor);
                                 command.setRepeating(state.repeating);
                                 command.setMusicId(state.currentSongId);
+                                command.setCurrentPlaylist(state.currentPlaylist);
                                 command.setCurrentPosition(state.currentPosition);
                                 String sw = mapper.writeValueAsString(command);
                                 session.sendMessage(new TextMessage(sw));
@@ -97,6 +98,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
     public void handleMessage(@NotNull WebSocketSession session, @NotNull WebSocketMessage<?> message) throws IOException {
         String usuario = (String) session.getAttributes().get("Usuario");
                 if (message instanceof TextMessage) {
+
                     String json = (String) message.getPayload();
                     Comando comando = mapper.readValue(json, Comando.class);
                     String command = comando.getComando();
@@ -134,7 +136,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                         state.started=true;
                         state.currentSongId=comando.getMusicId();
                         state.repeating= false;
-
+                        state.currentPlaylist= comando.getCurrentPlaylist();
                         pair.put(usuario, state);
                         WebSocketSession seguidorSession = sessions.get(state.seguidor);
                         log.info("Es null? {}", Objects.isNull(seguidorSession) ? "Si" : "No");
