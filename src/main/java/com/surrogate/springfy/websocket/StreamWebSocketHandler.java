@@ -450,6 +450,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
             WebSocketSession seguidorSession = sessions.get(state.seguidor);
             if (Objects.nonNull(seguidorSession)) {
                 seguidorSession.sendMessage(message);
+                log.info("Enviando duracion a seguidor");
             }
 
         }
