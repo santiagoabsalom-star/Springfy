@@ -22,5 +22,6 @@ public class Audio {
     private String path;
     @Column(name = "audio_Id", nullable = false)
     private String audioId;
-
+    @Column(name="duration")
+    private Integer duration;
 }

@@ -16,6 +16,7 @@ import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static com.surrogate.springfy.websocket.StreamWebSocketHandler.getDurationSeconds;
 import static com.surrogate.springfy.websocket.StreamWebSocketHandler.getFile;
 
 
@@ -42,8 +43,6 @@ public class DownloadService {
                 "yt-dlp",
                 "-x",
                 "--audio-format", "wav",
-                "--external-downloader", "aria2c",
-                "--external-downloader-args", "aria2c:-x 24 -k 512K",
                 "-P", rutaWav,
                 url
         );
@@ -61,7 +60,7 @@ public class DownloadService {
                                 }
 
                             } else {
-                                log.info("YTDLP MODEFOCA FALLO");
+                                log.info("YTDLP MODEFOCA FALLO POR CAUSA DE {}", url);
                             }
                         });
             } catch (IOException e) {
@@ -74,8 +73,6 @@ public class DownloadService {
             "yt-dlp",
             "-x",
             "--audio-format", " mp3", "--audio-quality", "0",
-            "--external-downloader", "aria2c",
-            "--external-downloader-args", "aria2c:-x 24 -k 512K",
             "-P", rutaMp3,
             url
     );
@@ -169,6 +166,7 @@ public class DownloadService {
             Audio audio = new Audio();
             audio.setPath(rutaAudio);
             audio.setNombreaudio(nombre);
+            audio.setDuration((int )getDurationSeconds(file));
             audio.setAudioId(videoId);
             audio.setTipo("wav");
             audioRepository.save(audio);

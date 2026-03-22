@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.surrogate.springfy.models.bussines.streaming.ClientState;
 import com.surrogate.springfy.models.bussines.streaming.Comando;
 import com.surrogate.springfy.models.bussines.streaming.Control;
-import com.surrogate.springfy.models.bussines.streaming.WavInfo;
 import com.surrogate.springfy.repositories.bussines.DuoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -433,8 +432,9 @@ public class StreamWebSocketHandler implements WebSocketHandler {
         File song = buscarMusica(songId);
 // se puede dividir el file en las partes, con algoritmo de que acepte peso y duracion de la song:D por ejemplo 90 segundos y 30 megas, aprox 9000 partes
         //refactor metiendo todo el archivo en memoria: antes= disco->kernel->jvm->enviar, ahora disco->kernel->memoria(guardandotodo el archivo en memoria)->jvm->enviar
-        WavInfo wavInfo= parseWav(song);
-        int duracion=(int) wavInfo.getDurationSeconds();
+
+        if(song!=null ) {
+            int duracion=(int) getDurationSeconds(song);
 
         if(duracion>0){
             state.currentSongDuration=duracion;
@@ -454,6 +454,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
             }
 
         }
+
 
 try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
 
@@ -693,7 +694,7 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
 
 
 
-
+    }
     }
 
 
@@ -714,8 +715,11 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
         log.info("No se puede obtener el archivo de audio");
         return null;
     }
-
-    public static WavInfo parseWav(File file) throws IOException {
+//    public  double getDurationSeconds() {
+//        long byteRate = (long) sampleRate * channels * bitsPerSample / 8;
+//        return (double) dataSize / byteRate;
+//    }
+    public static double getDurationSeconds(File file) throws IOException {
 //en un archivo wav normalmente tengo 44 bytes de informacion. si no esta la informacion busco en otras partes del archivo wav
         try (FileInputStream fis = new FileInputStream(file);
              FileChannel channel = fis.getChannel()) {
@@ -789,11 +793,12 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
                 }
             }
 
-            if (sampleRate == null || channels == null || bitsPerSample == null || dataSize == null) {
+            if (sampleRate == null || dataSize == null) {
                 throw new IllegalStateException("WAV incompleto o corrupto");
             }
+            long byteRate = (long) sampleRate * channels * bitsPerSample / 8;
+            return (double) dataSize / byteRate;
 
-            return new WavInfo(sampleRate, channels, bitsPerSample, dataSize);
         }
     }
 
