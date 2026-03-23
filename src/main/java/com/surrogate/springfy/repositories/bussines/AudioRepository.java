@@ -13,10 +13,11 @@ public interface AudioRepository extends JpaRepository<Audio, Long> {
 
     @Query("Select (count(a )>0) from Audio a where a.audioId= :videoId")
     boolean existsAudioByAudioId(String videoId);
-    @Query("Select new com.surrogate.springfy.models.DTO.AudioDTO(a.nombreaudio,a.path, a.audioId, COALESCE(a.duration, 0)) from Audio a where lower(trim(a.tipo)) = 'mp3'\n")
+    @Query("Select new com.surrogate.springfy.models.DTO.AudioDTO(a.nombreaudio,a.path, a.audioId, a.duration) from Audio a where lower(trim(a.tipo)) = 'mp3'\n")
     List<AudioDTO> findAllAudiosMp3();
-    @Query("Select new com.surrogate.springfy.models.DTO.AudioDTO(a.nombreaudio,a.path, a.audioId, COALESCE(a.duration, 0)) from Audio a where lower(trim(a.tipo)) = 'wav'\n")
+    @Query("Select new com.surrogate.springfy.models.DTO.AudioDTO(a.nombreaudio,a.path, a.audioId, a.duration) from Audio a where lower(trim(a.tipo)) = 'wav'\n")
     List<AudioDTO> findAllAudiosWav();
-
+    @Query(value = "Select a.duration from Audio a where a.audioId= :audioId and a.tipo='wav'")
+    int songDuration(String audioId);
 
 }

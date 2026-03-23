@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.surrogate.springfy.models.bussines.streaming.ClientState;
 import com.surrogate.springfy.models.bussines.streaming.Comando;
 import com.surrogate.springfy.models.bussines.streaming.Control;
+import com.surrogate.springfy.repositories.bussines.AudioRepository;
 import com.surrogate.springfy.repositories.bussines.DuoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,8 @@ public class StreamWebSocketHandler implements WebSocketHandler {
   private final ObjectMapper mapper = new ObjectMapper();
     private static final int BYTES_PER_SECOND = 192000;
     private final DuoRepository duoRepository;
+    private final AudioRepository audioRepository;
+
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws IOException {
         String usuario = (String) session.getAttributes().get("Usuario");
@@ -139,7 +142,6 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                         pair.put(usuario, state);
                         WebSocketSession seguidorSession = sessions.get(state.seguidor);
                         log.info("Es null? {}", Objects.isNull(seguidorSession) ? "Si" : "No");
-
                         if(Objects.nonNull(seguidorSession)) {
                             seguidorSession.sendMessage(message);
                         }
@@ -426,15 +428,17 @@ public class StreamWebSocketHandler implements WebSocketHandler {
     }
 //funcion que tengo que cambiar y optimizar-> abrir el archivo y enviarlo en bytes
     private void Stream(ClientState state, String songId) throws LineUnavailableException, IOException {
+        int duracion=audioRepository.songDuration(songId);
 
         Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
         state.currentSongId = songId;
         File song = buscarMusica(songId);
+
 // se puede dividir el file en las partes, con algoritmo de que acepte peso y duracion de la song:D por ejemplo 90 segundos y 30 megas, aprox 9000 partes
         //refactor metiendo todo el archivo en memoria: antes= disco->kernel->jvm->enviar, ahora disco->kernel->memoria(guardandotodo el archivo en memoria)->jvm->enviar
 
         if(song!=null ) {
-            int duracion=(int) getDurationSeconds(song);
+
 
         if(duracion>0){
             state.currentSongDuration=duracion;
