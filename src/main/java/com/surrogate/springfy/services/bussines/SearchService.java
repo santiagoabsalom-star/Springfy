@@ -115,6 +115,7 @@ public class SearchService {
         return audioRepository.findAllAudiosMp3();
 
     }
+
     public List<AudioDTO> AllInCloudWav() {
         return audioRepository.findAllAudiosWav();
     }

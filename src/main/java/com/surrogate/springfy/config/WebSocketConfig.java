@@ -15,13 +15,17 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfig implements WebSocketConfigurer {
     private final InterceptorJWT interceptorJWT;
     private final StreamWebSocketHandler streamWebSocketHandler;
+//    private final MessageWebSocketHandler messageWebSocketHandler;
+
     @Override
     public void registerWebSocketHandlers(@NotNull WebSocketHandlerRegistry registry) {
-        registry.addHandler(streamWebSocketHandler
-                , "/stream/**")
+        registry.addHandler(streamWebSocketHandler, "/stream/**")
                 .addInterceptors(interceptorJWT)
                 .setAllowedOrigins("*");
 
+//        registry.addHandler(messageWebSocketHandler,"/message/**")
+//                .addInterceptors(interceptorJWT)
+//                .setAllowedOrigins("*");
 
     }
 }

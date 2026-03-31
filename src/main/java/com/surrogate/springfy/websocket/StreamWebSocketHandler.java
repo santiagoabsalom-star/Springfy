@@ -100,10 +100,11 @@ public class StreamWebSocketHandler implements WebSocketHandler {
     public void handleMessage(@NotNull WebSocketSession session, @NotNull WebSocketMessage<?> message) throws IOException {
         String usuario = (String) session.getAttributes().get("Usuario");
                 if (message instanceof TextMessage) {
-
                     String json = (String) message.getPayload();
+
                     Comando comando = mapper.readValue(json, Comando.class);
                     String command = comando.getComando();
+
                     if(command.equals("is-duo-connected")) {
                         log.info("Recibida la verificacion de conexion de duo");
                         String duoUsername = duoRepository.getOtherUsername(usuario);
@@ -157,159 +158,168 @@ public class StreamWebSocketHandler implements WebSocketHandler {
 
                     }
                     else{
-                        if(comando.getComando().equals("follower-connect")){
-                        ClientState state = pair.get(comando.getAnfitrion());
-                        if(state.seguidor.equals(usuario)){
-                            state.a.sendMessage(message);
-                            state.s=session;
-                        }
-                        } else if (comando.getComando().equals("follower-disconnect")) {
-                            ClientState state = pair.get(comando.getAnfitrion());
-                            if(state.seguidor.equals(usuario)){
-                                state.a.sendMessage(message);
-                                state.s=null;
+                        switch (command) {
+                            case "follower-connect" -> {
+                                ClientState state = pair.get(comando.getAnfitrion());
+                                if (state.seguidor.equals(usuario)) {
+                                    state.a.sendMessage(message);
+                                    state.s = session;
+                                }
+                            }
+                            case "follower-disconnect" -> {
+                                ClientState state = pair.get(comando.getAnfitrion());
+                                if (state.seguidor.equals(usuario)) {
+                                    state.a.sendMessage(message);
+                                    state.s = null;
 
+                                }
+                            }
+                            case "emoji" -> {
+                                String duoUsername = duoRepository.getOtherUsername(usuario);
+                                WebSocketSession anfitrion = sessions.get(duoUsername);
+                                if (Objects.nonNull(anfitrion)) {
+                                    anfitrion.sendMessage(message);
+                                }
                             }
                         }
+
                         ClientState state = pair.get(usuario);
                         //Como lo voy a guardar con el anfitrion (primero que se conecte), si seguidor manda mensaje no va a hacer nada pq es null:D
-                        if(state != null && state.anfitrion.equals(usuario)){
-                        if (command.equals("stop")) {
+                        if(state != null && state.anfitrion.equals(usuario)) {
+                            switch (command) {
+                                case "stop" -> {
 
-                            if (!state.control.pausado) {
-                                if(state.s!=null) {
-                                    state.s.sendMessage(message);
-                                }else{
-                                    WebSocketSession seguidorSession = sessions.get(state.seguidor);
-                                    if(Objects.nonNull(seguidorSession)) {
-                                        seguidorSession.sendMessage(message);
+                                    if (!state.control.pausado) {
+                                        if (state.s != null) {
+                                            state.s.sendMessage(message);
+                                        } else {
+                                            WebSocketSession seguidorSession = sessions.get(state.seguidor);
+                                            if (Objects.nonNull(seguidorSession)) {
+                                                seguidorSession.sendMessage(message);
+                                            }
+                                        }
+                                        state.control.stop();
+                                    } else {
+                                        log.info("Ya esta pausado mongoloid");
                                     }
                                 }
-                                state.control.stop();
-                            } else {
-                                log.info("Ya esta pausado mongoloid");
-                            }
+                                case "resume" -> {
 
-                        } else if (command.equals("resume")) {
-
-                            if (state.control.pausado) {
-                                state.startTime = System.nanoTime() -
-                                        ((state.bytesSentTotal * 1_000_000_000L) / BYTES_PER_SECOND);
-                                if(state.s!=null) {
-                                    state.s.sendMessage(message);
-                                }else{
-                                    WebSocketSession seguidorSession = sessions.get(state.seguidor);
-                                    if(Objects.nonNull(seguidorSession)) {
-                                        seguidorSession.sendMessage(message);
+                                    if (state.control.pausado) {
+                                        state.startTime = System.nanoTime() -
+                                                ((state.bytesSentTotal * 1_000_000_000L) / BYTES_PER_SECOND);
+                                        if (state.s != null) {
+                                            state.s.sendMessage(message);
+                                        } else {
+                                            WebSocketSession seguidorSession = sessions.get(state.seguidor);
+                                            if (Objects.nonNull(seguidorSession)) {
+                                                seguidorSession.sendMessage(message);
+                                            }
+                                        }
+                                        state.control.reanudar();
+                                    } else {
+                                        log.info("Ya esta reanudado mongoloid");
                                     }
                                 }
-                                state.control.reanudar();
-                            } else {
-                                log.info("Ya esta reanudado mongoloid");
-                            }
+                                case "change" -> {
 
-                        } else if (command.equals("change")) {
+                                    if (state.s != null) {
+                                        state.currentPosition = 0;
+                                        state.s.sendMessage(message);
+                                    } else {
+                                        WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
+                                        if (Objects.nonNull(seguidorSession)) {
+                                            seguidorSession.sendMessage(message);
+                                        }
+                                    }
+                                    if (state.control.pausado) {
+                                        state.startTime = System.nanoTime();
+                                        state.control.reanudar();
+                                    }
+                                    state.setChange(true);
 
-                            if(state.s!=null){
-                                state.currentPosition=0;
-                                state.s.sendMessage(message);
-                            }
-                            else {
-                                WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
-                                if (Objects.nonNull(seguidorSession)) {
-                                    seguidorSession.sendMessage(message);
+
+                                    state.byteOffset = 0;
+
+
+                                    // break en el while y comienza una nueva musica con el mismo metodo;D
+
+                                    //mucho mas facil y rapido  que hacer un puto evento y conectar los eventos,
+                                    // pero creo que es mas propenso a fallos, si uso bien la logica puede ser potencialmente mas rapido que eventos:D
+
+
+                                    state.executorService.submit(() -> {
+                                        try {
+
+                                            Stream(state, comando.getMusicId());
+                                        } catch (LineUnavailableException | IOException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    });
                                 }
-                            }
-                            if (state.control.pausado) {
-                                state.startTime = System.nanoTime();
-                                state.control.reanudar();
-                            }
-                            state.setChange(true);
-
-
-                            state.byteOffset = 0;
-
-
-                            // break en el while y comienza una nueva musica con el mismo metodo;D
-
-                            //mucho mas facil y rapido  que hacer un puto evento y conectar los eventos,
-                            // pero creo que es mas propenso a fallos, si uso bien la logica puede ser potencialmente mas rapido que eventos:D
-
-
-                            state.executorService.submit(() -> {
-                                try {
-
-                                    Stream(state, comando.getMusicId());
-                                } catch (LineUnavailableException | IOException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            });
-                        } else if (comando.getComando().equals("move")) {
+                                case "move" -> {
 
 //......position esta entre los extremos de la musica, cuando...mover-> position en clientState cambia, siempre entre los valores de la cancion
-                            int position= comando.getSegundosToMove();
-                            if(position>=0 && position<=state.currentSongDuration){
+                                    int position = comando.getSegundosToMove();
+                                    if (position >= 0 && position <= state.currentSongDuration) {
 
-                                boolean despausarIfNotPausado=state.control.pausado;
-                                state.control.stop();
-                                state.byteOffset = position * BYTES_PER_SECOND;
+                                        boolean despausarIfNotPausado = state.control.pausado;
+                                        state.control.stop();
+                                        state.byteOffset = position * BYTES_PER_SECOND;
 
-                                if(state.s!=null){
-                                    state.s.sendMessage(message);
+                                        if (state.s != null) {
+                                            state.s.sendMessage(message);
+                                        } else {
+                                            WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
+                                            if (Objects.nonNull(seguidorSession)) {
+                                                seguidorSession.sendMessage(message);
+                                            }
+
+                                        }
+                                        if (!despausarIfNotPausado) {
+                                            state.control.reanudar();
+                                        }
+
+                                    } else {
+                                        log.info("La cantidad de segundos no es valida");
+                                    }
                                 }
-                                else{
-                                    WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
-                                    if (Objects.nonNull(seguidorSession)) {
-                                        seguidorSession.sendMessage(message);
+                                case "repeat" -> {
+
+
+                                    state.repeating = !state.repeating;
+                                    if (state.s != null) {
+                                        state.s.sendMessage(message);
+                                    } else {
+                                        WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
+                                        if (Objects.nonNull(seguidorSession)) {
+                                            seguidorSession.sendMessage(message);
+                                        }
+                                    }
+                                    log.info("Modo repetir = {}", state.repeating);
+                                }
+                                case "disconnect" -> {
+                                    if (state.s == null) {
+
+                                        WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
+                                        if (Objects.nonNull(seguidorSession)) {
+                                            seguidorSession.sendMessage(message);
+                                        }
+                                    } else {
+                                        if (state.s.isOpen()) {
+                                            state.s.sendMessage(message);
+                                        }
                                     }
 
+                                    state.s = null;
+                                    state.a = null;
+                                    state.anfitrion = null;
+                                    state.seguidor = null;
+                                    state.setStopped(true);
+                                    pair.remove(usuario);
                                 }
-                                if(!despausarIfNotPausado){
-                                    state.control.reanudar();
-                                }
-
+                                default -> log.info("Comando desconocido {}", command);
                             }
-                            else{
-                                log.info("La cantidad de segundos no es valida");
-                            }
-
-                        } else if (comando.getComando().equals("repeat")) {
-
-
-                            state.repeating = !state.repeating;
-                            if(state.s!=null){
-                                state.s.sendMessage(message);
-                            }else{
-                                WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
-                                if (Objects.nonNull(seguidorSession)) {
-                                    seguidorSession.sendMessage(message);
-                                }
-                            }
-                            log.info("Modo repetir = {}", state.repeating);
-
-                        } else if (comando.getComando().equals("disconnect")) {
-                        if(state.s==null){
-
-                            WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
-                            if(Objects.nonNull(seguidorSession)){
-                                seguidorSession.sendMessage(message);
-                            }
-                        }else{
-                            if(state.s.isOpen()) {
-                                state.s.sendMessage(message);
-                            }
-                        }
-
-                        state.s=null;
-                        state.a=null;
-                        state.anfitrion=null;
-                        state.seguidor=null;
-                        state.setStopped(true);
-                        pair.remove(usuario);
-                    }
-                    else {
-                            log.info("Comando desconocido {}", command);
-                        }
                         }
                     }
                 }
