@@ -17,11 +17,7 @@ public class Message {
         this.session = session;
         this.message = message;
     }
-    public Message(WebSocketSession session, CloseStatus closeStatus) {
-        this.session = session;
-        this.closeStatus = closeStatus;
 
-    }
     public Message(ClientState state, String usuario) {
         this.state = state;
         this.usuario = usuario;

@@ -38,7 +38,7 @@ public class MessageWebSocketHandler implements WebSocketHandler {
             sessions.put(usuario, session);
             String duoUsername = duoRepository.getOtherUsername(usuario);
             if (sessions.containsKey(duoUsername)) {
-                Comando commando = new Comando();;
+                Comando commando = new Comando();
                 commando.setComando("duo-connected");
                 String js = mapper.writeValueAsString(commando);
                 TextMessage textMessage = new TextMessage(js);
@@ -86,9 +86,9 @@ public class MessageWebSocketHandler implements WebSocketHandler {
                     log.info(comando.getComando());
                     session.sendMessage(new TextMessage(js));
                 }
-                return;
+
             }
-            return;
+
 
         }
 
@@ -96,12 +96,12 @@ public class MessageWebSocketHandler implements WebSocketHandler {
     }
 
     @Override
-    public void handleTransportError(@NotNull WebSocketSession session, @NotNull Throwable exception) throws Exception {
+    public void handleTransportError(@NotNull WebSocketSession session, @NotNull Throwable exception) {
 
     }
 
     @Override
-    public void afterConnectionClosed(@NotNull WebSocketSession session, @NotNull CloseStatus closeStatus) throws Exception {
+    public void afterConnectionClosed(@NotNull WebSocketSession session, @NotNull CloseStatus closeStatus) {
         String usuario = (String) session.getAttributes().get("Usuario");
         sessions.remove(usuario);
 
