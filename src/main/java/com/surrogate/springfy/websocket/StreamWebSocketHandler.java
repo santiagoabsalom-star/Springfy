@@ -1,6 +1,7 @@
 package com.surrogate.springfy.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.surrogate.springfy.models.DTO.Message;
 import com.surrogate.springfy.models.bussines.streaming.ClientState;
 import com.surrogate.springfy.models.bussines.streaming.Comando;
 import com.surrogate.springfy.models.bussines.streaming.Control;
@@ -11,7 +12,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 
@@ -30,7 +33,6 @@ import static com.surrogate.springfy.services.bussines.DownloadService.rutaWav;
 
 @Component
 @Slf4j
-@EnableScheduling
 @RequiredArgsConstructor
 public class StreamWebSocketHandler implements WebSocketHandler {
     private final ConcurrentMap<String, ClientState> pair = new ConcurrentHashMap<>();
@@ -39,6 +41,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
     private static final int BYTES_PER_SECOND = 192000;
     private final DuoRepository duoRepository;
     private final AudioRepository audioRepository;
+    private final ApplicationEventPublisher publisher;
 
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws IOException {
@@ -51,42 +54,8 @@ public class StreamWebSocketHandler implements WebSocketHandler {
             if(Objects.isNull(pair.get(usuario))) {
                 String duoUsername = duoRepository.getOtherUsername(usuario);
                 if (duoUsername != null) {
-
-
-                    WebSocketSession duo = sessions.get(duoUsername);
-
-                    if(Objects.nonNull(duo) && duo.isOpen()) {
-
-                        Comando comando = new Comando();
-                        comando.setComando("duo-connected");
-                        String json = mapper.writeValueAsString(comando);
-                            duo.sendMessage(new TextMessage(json));
-                        ClientState state = pair.get(duoUsername);
-                        if (Objects.nonNull(state)) {
-                            if (state.started) {
-                                log.info("Avisando a {} que ya esta iniciada la musica" ,usuario);
-                                Comando duration = new Comando();
-                                duration.setComando("duration");
-                                duration.setDuration(state.currentSongDuration);
-                                String jsonDuration = mapper.writeValueAsString(duration);
-
-                                session.sendMessage(new TextMessage(jsonDuration));
-
-                                Comando command = new Comando();
-                                command.setComando("start");
-                                log.info("isPlaying? {}", !state.control.pausado);
-                                command.setPlaying(!state.control.pausado);
-                                command.setAnfitrion(state.anfitrion);
-                                command.setSeguidor(state.seguidor);
-                                command.setRepeating(state.repeating);
-                                command.setMusicId(state.currentSongId);
-                                command.setCurrentPlaylist(state.currentPlaylist);
-                                command.setCurrentPosition(state.currentPosition);
-                                String sw = mapper.writeValueAsString(command);
-                                session.sendMessage(new TextMessage(sw));
-                            }
-                        }
-                    }
+                    ClientState clientState = pair.get(duoUsername);
+                    publisher.publishEvent(new Message(clientState, usuario));
                 }
             }
         }
@@ -95,6 +64,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
             session.close(new CloseStatus(404, "Usuario no encontrado"));
         }
     }
+
 //refactor a como se inicia el stream, para poder ver in real time (osea disculpame) que usuario inicio y que usuario es el anfitrion
     @Override
     public void handleMessage(@NotNull WebSocketSession session, @NotNull WebSocketMessage<?> message) throws IOException {
@@ -105,28 +75,10 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                     Comando comando = mapper.readValue(json, Comando.class);
                     String command = comando.getComando();
 
-                    if(command.equals("is-duo-connected")) {
-                        log.info("Recibida la verificacion de conexion de duo");
-                        String duoUsername = duoRepository.getOtherUsername(usuario);
-                        if (duoUsername != null) {
-                            if (sessions.containsKey(duoUsername)) {
-                                Comando commando = new Comando();
-                                commando.setComando("duo-connected");
-                                String js = mapper.writeValueAsString(commando);
-                                log.info("Enviando verificacion de conexion de duo");
-                                log.info(comando.getComando());
-                                session.sendMessage(new TextMessage(js));
-                            }
-                            return;
-                        }
-                        return;
 
-                    }
                     if(command.equals("start") && Objects.isNull(pair.get(usuario))){
-
-
-
-                        ClientState state = new ClientState(session);
+                        WebSocketSession trueSession = sessions.get(usuario);
+                        ClientState state = new ClientState(trueSession);
 
 
 
@@ -161,9 +113,10 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                         switch (command) {
                             case "follower-connect" -> {
                                 ClientState state = pair.get(comando.getAnfitrion());
+                                WebSocketSession trueFollowerSession = sessions.get(state.seguidor);
                                 if (state.seguidor.equals(usuario)) {
                                     state.a.sendMessage(message);
-                                    state.s = session;
+                                    state.s = trueFollowerSession;
                                 }
                             }
                             case "follower-disconnect" -> {
@@ -174,13 +127,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
 
                                 }
                             }
-                            case "emoji" -> {
-                                String duoUsername = duoRepository.getOtherUsername(usuario);
-                                WebSocketSession anfitrion = sessions.get(duoUsername);
-                                if (Objects.nonNull(anfitrion)) {
-                                    anfitrion.sendMessage(message);
-                                }
-                            }
+
                         }
 
                         ClientState state = pair.get(usuario);
@@ -299,6 +246,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                                     log.info("Modo repetir = {}", state.repeating);
                                 }
                                 case "disconnect" -> {
+                                    log.info("Disconnect asked by {}", usuario);
                                     if (state.s == null) {
 
                                         WebSocketSession seguidorSession = sessions.get(comando.getSeguidor());
@@ -401,6 +349,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                             log.error("Error remover usuario {} con stack stacktrace {}", usuario, e.getMessage());
                         }
                     }
+
                         pair.remove(usuario);
                     sessions.remove(usuario);
 

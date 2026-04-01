@@ -1,6 +1,7 @@
 package com.surrogate.springfy.services.bussines;
 
 import com.surrogate.springfy.models.DTO.DuoRequest;
+import com.surrogate.springfy.models.DTO.Message;
 import com.surrogate.springfy.models.bussines.streaming.Duo;
 import com.surrogate.springfy.models.peticiones.Response;
 import com.surrogate.springfy.repositories.bussines.DuoRepository;
@@ -8,7 +9,10 @@ import com.surrogate.springfy.repositories.bussines.UsuarioRepository;
 import com.surrogate.springfy.services.auth.JWT.JWTService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.WebSocketMessage;
+import org.springframework.web.socket.WebSocketSession;
 
 import java.util.List;
 
@@ -19,8 +23,7 @@ public class StreamingService {
     private final DuoRepository duoRepository;
     private final UsuarioRepository usuarioRepository;
    private final  JWTService jwtService;
-
-
+   private final ApplicationEventPublisher publisher;
     public String getDuoByUsername(String token){
     String username= getUsernameFromToken(token);
     if(username==null){
@@ -50,6 +53,8 @@ return new Response("error",404, "No existe alguno de los dos usuarios");}
         String username = getUsernameFromToken(token);
         return usuarioRepository.getAllNombres(username);
     }
+
+
 
 
 }

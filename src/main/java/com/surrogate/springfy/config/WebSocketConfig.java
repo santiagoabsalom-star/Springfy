@@ -2,6 +2,7 @@ package com.surrogate.springfy.config;
 //
 
 import com.surrogate.springfy.websocket.InterceptorJWT;
+import com.surrogate.springfy.websocket.MessageWebSocketHandler;
 import com.surrogate.springfy.websocket.StreamWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
@@ -15,7 +16,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfig implements WebSocketConfigurer {
     private final InterceptorJWT interceptorJWT;
     private final StreamWebSocketHandler streamWebSocketHandler;
-//    private final MessageWebSocketHandler messageWebSocketHandler;
+    private final MessageWebSocketHandler messageWebSocketHandler;
 
     @Override
     public void registerWebSocketHandlers(@NotNull WebSocketHandlerRegistry registry) {
@@ -23,9 +24,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 .addInterceptors(interceptorJWT)
                 .setAllowedOrigins("*");
 
-//        registry.addHandler(messageWebSocketHandler,"/message/**")
-//                .addInterceptors(interceptorJWT)
-//                .setAllowedOrigins("*");
+       registry.addHandler(messageWebSocketHandler,"/message/**")
+               .addInterceptors(interceptorJWT)
+                .setAllowedOrigins("*");
 
     }
 }

@@ -48,7 +48,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(@org.jetbrains.annotations.NotNull HttpServletRequest request) {
         String path = request.getRequestURI();
         return path.startsWith("/api/auth/login") || path.startsWith("/api/auth/register") || path.startsWith("/api/search")
-                || path.startsWith("/api/download") || path.startsWith("/stream") || path.startsWith("/api/streaming/");
+                || path.startsWith("/api/download") || path.startsWith("/stream") || path.startsWith("/message")|| path.startsWith("/api/streaming/");
 
     }
 

@@ -32,6 +32,7 @@ import java.util.List;
 @Slf4j
 @Configuration
 @EnableWebSecurity
+
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JWTAuthFilter jwtAuthFilter;
@@ -50,6 +51,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/register","/stream/**"
+                                ,"/message/**"
                         ).permitAll()
 
                         .requestMatchers("/api/download/**").permitAll()
