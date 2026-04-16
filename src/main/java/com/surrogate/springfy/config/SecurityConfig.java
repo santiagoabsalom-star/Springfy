@@ -47,6 +47,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
                         .requestMatchers("/api/search/**").permitAll()
                         .requestMatchers("/api/streaming/**").permitAll()
+                        .requestMatchers("/api/usage/**").permitAll()
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/register","/stream/**"

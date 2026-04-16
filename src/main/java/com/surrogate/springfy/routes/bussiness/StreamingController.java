@@ -29,7 +29,6 @@ public class StreamingController {
 
             return ResponseEntity.ok().body(username);
 
-
         }
 
         @GetMapping("/get-all-usernames")
@@ -51,7 +50,7 @@ public class StreamingController {
         }
 
 
-    private String getTokenFromRequest(HttpServletRequest request) {
+    static String getTokenFromRequest(HttpServletRequest request) {
         if (request.getHeader("Authorization") == null ) {
 
             return null;

@@ -6,6 +6,7 @@ import com.surrogate.springfy.models.bussines.streaming.Comando;
 import com.surrogate.springfy.models.bussines.streaming.Control;
 import com.surrogate.springfy.repositories.bussines.AudioRepository;
 import com.surrogate.springfy.repositories.bussines.DuoRepository;
+import com.surrogate.springfy.services.bussines.UsageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -39,6 +40,8 @@ public class StreamWebSocketHandler implements WebSocketHandler {
     private static final int BYTES_PER_SECOND = 192000;
     private final DuoRepository duoRepository;
     private final AudioRepository audioRepository;
+    private final UsageService usageService;
+
 
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws IOException {
@@ -315,7 +318,7 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                                     state.a = null;
                                     state.anfitrion = null;
                                     state.seguidor = null;
-                                    state.setStopped(true);
+                                    state.setStopped(true);//aca mira, un metodo que haga que esto sea true, te expulse a la mierda
                                     pair.remove(usuario);
                                 }
                                 default -> log.info("Comando desconocido {}", command);
@@ -425,7 +428,9 @@ public class StreamWebSocketHandler implements WebSocketHandler {
                     sessions.remove(usuario);
 
                 }
-
+            sessions.remove(usuario);
+            usageService.terminar_primer_plano(usuario);
+            usageService.terminar_segundo_plano(usuario);
 
         }catch (Exception e) {
             log.error(e.getMessage());
@@ -719,6 +724,7 @@ try (RandomAccessFile raf = new RandomAccessFile(song, "r")) {
 
     @Nullable
     public static File getFile(File carpeta, String videoId, Logger log) {
+
         for (final File audio : Objects.requireNonNull(carpeta.listFiles())) {
             String name = audio.getName();
             if ((name.endsWith(".mp3") || name.endsWith(".webm") || name.endsWith(".m4a")|| name.endsWith(".wav")) && name.contains(videoId)) {

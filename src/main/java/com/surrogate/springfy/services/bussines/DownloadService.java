@@ -7,12 +7,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -26,6 +29,7 @@ import static com.surrogate.springfy.websocket.StreamWebSocketHandler.getFile;
 public class DownloadService {
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final AudioRepository audioRepository;
+    private final TaskScheduler taskScheduler;
     String yturl = "https://www.youtube.com/watch?v=";
     public static String rutaMp3 = "/home/santi/springfyCloud/mp3/";
     public static String rutaWav = "/home/santi/springfyCloud/wav/";
@@ -38,43 +42,16 @@ public class DownloadService {
 
         String url = yturl + videoId;
 
-        executor.execute(() -> {processBuilder.command(
+        descargarWav(videoId,url);
+
+        processBuilder.command(
                 "yt-dlp",
-                "-x",
-                "--audio-format", "wav",
-                "-P", rutaWav,
+                "-f", "bestaudio",
+                "--no-post-overwrites",
+                "--force-ipv4",
+                "-P", rutaMp3,
                 url
         );
-
-            try {
-                processBuilder.start()
-                        .onExit()
-                        .thenAccept(process -> {
-                            if (process.exitValue() == 0) {
-                                try {
-
-                                    guardarAudioWav(videoId);
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
-
-                            } else {
-                                log.info("YTDLP MODEFOCA FALLO POR CAUSA DE {}", url);
-                            }
-                        });
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-
-    processBuilder.command(
-            "yt-dlp",
-            "-x",
-            "--audio-format", " mp3", "--audio-quality", "0",
-            "-P", rutaMp3,
-            url
-    );
 
 
     //Process process = null;
@@ -111,6 +88,37 @@ public class DownloadService {
         return new Response("success", 200, "Guardado en cloud con exito");
 
     }
+    @Async
+    protected void descargarWav(String videoId,String url) {
+
+    processBuilder.command(
+            "yt-dlp",
+            "-x",
+            "--audio-format", "wav",
+            "-P", rutaWav,
+            url
+    );
+
+    try {
+        processBuilder.start()
+                .onExit()
+                .thenAccept(process -> {
+                    if (process.exitValue() == 0) {
+                        try {
+
+                            guardarAudioWav(videoId);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+
+                    } else {
+                        log.info("YTDLP MODEFOCA FALLO POR CAUSA DE {}", url);
+                    }
+                });
+    } catch (IOException e) {
+        throw new RuntimeException(e);
+    }
+}
 
 
     public Resource downloadOnApp(String videoId) {
@@ -129,11 +137,45 @@ public class DownloadService {
             long stopTime = System.currentTimeMillis();
             log.info("Tiempo en buscar el archivo de audio fue {} ms", (stopTime - startTime));
             return file;
-
         }
 
     }
+public Resource sampleOnApp(String videoId) {
+    File dir= new File(rutaMp3);
+    try{
+            String url = yturl + videoId;
+        processBuilder.command(
+                "yt-dlp",
+                "-f", "bestaudio",
+                "--no-post-overwrites",
+                "--force-ipv4",
+                "-P", rutaMp3,
+                url
+        );
+            processBuilder.start().onExit().join();
 
+            return new FileSystemResource(buscarAudioMp3(dir, videoId));
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }finally {
+
+        taskScheduler.schedule(()->CronFileDelete(videoId), Instant.now().plusSeconds(5) );
+        }
+
+}
+private void CronFileDelete(String videoId) {
+        log.info("CronFileDelete despues de 5 segundos  [{}]", videoId);
+        try {
+
+            File file = buscarAudioMp3(new File(rutaMp3), videoId);
+            if (!file.delete()) {
+                log.error("Error al eliminar el archivo de audio");
+            }
+        }catch (Exception e) {
+            log.error("Error al eliminar el archivo de audio {}", e.getMessage());
+        }
+}
     private void guardarAudioMp3(String videoId) throws IOException {
         File file = buscarAudioMp3(new File(rutaMp3), videoId);
         if (file == null) {

@@ -40,6 +40,15 @@ public class DownloadController {
         }
         return new ResponseEntity<>(resource, HttpStatus.NOT_FOUND);
     }
+    @PostMapping(value = "/sampleOnApp", produces = "audio/mpeg", consumes = "application/json")
+    public ResponseEntity<Resource> Sample(@RequestBody DownloadRequest request)  {
+        String videoId = request.videoId();
 
+        Resource resource = downloadService.sampleOnApp(videoId);
+        if (resource != null && resource.exists()) {
+            return new ResponseEntity<>(resource, HttpStatus.OK);
+        }
+        return new ResponseEntity<>(resource, HttpStatus.NOT_FOUND);
+    }
 
 }

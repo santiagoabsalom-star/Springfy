@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.RecursiveTask;
 
@@ -15,7 +17,6 @@ import static com.surrogate.springfy.websocket.StreamWebSocketHandler.getFile;
 class SpringfyApplicationTests {
    private static final Logger log = LoggerFactory.getLogger(SpringfyApplicationTests.class);
     public static void main(String[] args)  {
-
 
 
 
@@ -109,5 +110,25 @@ public static void speedtestsVideoDownloading() {
     long end=System.currentTimeMillis();
     log.info("Total time: {}ms", end - start);
 }
+public static void SortArray() {
+    for (int j = 0; j < 10; j++) {
+        Random rand = new Random();
+        int size = 500000000;
+        int[] normalSort = new int[size];
+        int[] parallelSort = new int[size];
+        for (int i = 0; i <= size - 1; i++) {
+            normalSort[i] = rand.nextInt();
+            parallelSort[i] = rand.nextInt();
+        }
+        long start = System.currentTimeMillis();
+        Arrays.parallelSort(parallelSort);
+        log.info("Tiempo transcurrido en paralelo : {}ms", System.currentTimeMillis() - start);
+        long start2 = System.currentTimeMillis();
+        Arrays.sort(normalSort);
+        log.info("Tiempo transcurrido normal: {}ms", System.currentTimeMillis() - start2);
+    }
+}
 }
 
+// Hice esto
+// int size = 500000000;

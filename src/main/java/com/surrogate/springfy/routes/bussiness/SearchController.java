@@ -21,7 +21,7 @@ public class SearchController {
 
 
     @PostMapping(value = "/by-name", produces = "application/json", consumes = "application/json")
-    public ResponseEntity<SearchResponse> searchByName(@RequestBody SearchRequest name) throws Exception {
+    public ResponseEntity<SearchResponse> searchByName(@RequestBody SearchRequest name)  {
         String nombre = name.name();
 
         SearchResponse response = searchService.searchByNombre(nombre);
@@ -37,9 +37,10 @@ public class SearchController {
         List<AudioDTO> audioDTOS = searchService.AllInCloudMp3();
         return ResponseEntity.of(Optional.ofNullable(audioDTOS));
     }
-    @GetMapping(value="search-all-wav", produces = "application/json")
+    @GetMapping(value="/search-all-wav", produces = "application/json")
     public ResponseEntity<List<AudioDTO>> searchAllWav() {
         List<AudioDTO> audioDTOS = searchService.AllInCloudWav();
         return ResponseEntity.of(Optional.ofNullable(audioDTOS));
     }
+
 }
