@@ -2,6 +2,8 @@ package com.surrogate.springfy.config;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.surrogate.springfy.utils.DaoAuthenticationProviderWithId;
 import com.surrogate.springfy.utils.UserDetailsServiceWithId;
 import lombok.RequiredArgsConstructor;
@@ -161,6 +163,8 @@ public class SecurityConfig {
 
     @Bean
     public ObjectMapper mapper() {
-        return new ObjectMapper();
+        return JsonMapper.builder()
+                .addModule(new JavaTimeModule())
+                .build();
     }
 }

@@ -13,11 +13,10 @@ import java.util.concurrent.RecursiveTask;
 import static com.surrogate.springfy.services.bussines.DownloadService.rutaMp3;
 import static com.surrogate.springfy.services.bussines.DownloadService.rutaWav;
 import static com.surrogate.springfy.websocket.StreamWebSocketHandler.getFile;
-
 class SpringfyApplicationTests {
-   private static final Logger log = LoggerFactory.getLogger(SpringfyApplicationTests.class);
-    public static void main(String[] args)  {
 
+   private static final Logger log = LoggerFactory.getLogger(SpringfyApplicationTests.class);
+    public static void main(String[] args) {
 
 
     }

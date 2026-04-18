@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 
+import java.util.List;
+
 import static com.surrogate.springfy.routes.bussiness.StreamingController.getTokenFromRequest;
 
 @RestController
@@ -37,25 +39,41 @@ public class UsageController {
         return ResponseEntity.ok(usoSemanalDTO);
     }
     @GetMapping("/uso_diario_primer_plano")
-    public ResponseEntity<UsoDiarioDTO> usoDiarioPrimerPlano(HttpServletRequest request) {
+    public ResponseEntity<List<UsoDiarioDTO>> usoDiarioPrimerPlano(HttpServletRequest request) {
         String token = getTokenFromRequest(request);
-        UsoDiarioDTO usoDiarioDTO= usageService.usoDiarioPrimerPlanoDTO(token);
-        if(usoDiarioDTO == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(usoDiarioDTO);
-    }
-    @GetMapping("/uso_diario_segundo_plano")
-    public ResponseEntity<UsoDiarioDTO> usoDiarioSegundoPlano(HttpServletRequest request) {
-        String token = getTokenFromRequest(request);
-        UsoDiarioDTO usoDiarioDTO= usageService.usoDiarioSegundoPlanoDTO(token);
+        List<UsoDiarioDTO> usoDiarioDTO= usageService.usoDiarioPrimerPlanoDTO(token);
         if(usoDiarioDTO == null) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(usoDiarioDTO);
     }
 
+
+    @GetMapping("/uso_diario_segundo_plano")
+    public ResponseEntity<List<UsoDiarioDTO>> usoDiarioSegundoPlano(HttpServletRequest request) {
+        String token = getTokenFromRequest(request);
+       List<UsoDiarioDTO> usoDiarioDTO= usageService.usoDiarioSegundoPlanoDTO(token);
+        if(usoDiarioDTO == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(usoDiarioDTO);
+    }
+    @PostMapping("/registrar_uso_diario_segundo_plano")
+    public ResponseEntity<Response> registrarUsoDiarioSegundoPlano(HttpServletRequest request,@RequestBody UsoDiarioDTO usoDiarioDTO) {
+        String token = getTokenFromRequest(request);
+        Response response= usageService.registrarUsoDiarioSegundoPlano(token,usoDiarioDTO);
+        return ResponseEntity.status(response.getHttpCode()).body(response);
+    }
+
+    @PostMapping("/registrar_uso_diario_primer_plano")
+    public ResponseEntity<Response> registrarUsoDiarioPrimerPlano(HttpServletRequest request,@RequestBody UsoDiarioDTO usoDiarioDTO) {
+        String token = getTokenFromRequest(request);
+        Response response= usageService.registrarUsoDiarioPrimerPlano(token,usoDiarioDTO);
+        return ResponseEntity.status(response.getHttpCode()).body(response);
+    }
+
     @PostMapping("/iniciar_primer_plano/{nombre}")
+
     public ResponseEntity<Response> iniciarPrimerPlano(@PathVariable String nombre) {
         Response response = usageService.iniciar_primer_plano(nombre);
 

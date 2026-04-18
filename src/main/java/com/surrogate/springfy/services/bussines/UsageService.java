@@ -13,8 +13,10 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
 import java.util.List;
 
@@ -80,43 +82,59 @@ public class UsageService {
     }
     public UsoSemanalDTO usoSemanalSegundoPlanoDTO(String token){
         String nombre= jwtService.extractUsername(token);
-        if(LocalDateTime.now().getDayOfWeek()== DayOfWeek.SUNDAY) {
-            List<UsoDiarioDTO> usoDiario = usageRepository.usoSemanalByNombre(nombre, LocalDateTime.now().minusWeeks(1), LocalDateTime.now(), Tipo.SEGUNDO_PLANO);
-            int uso_semanal = 0;
-            for (UsoDiarioDTO dto : usoDiario) {
-                uso_semanal = uso_semanal + dto.usoDiario();
-            }
-            if (uso_semanal == 0) {
-                return null;
-            }
-            return new UsoSemanalDTO(uso_semanal);
-        }return null;
+            List<UsoDiarioDTO> usoDiario = usageRepository.usoBetween(nombre, LocalDateTime.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)), LocalDateTime.now(), Tipo.SEGUNDO_PLANO);
+
+
+
+            return new UsoSemanalDTO(usoDiario);
         //sumar tiempos y devolver el usoDto, tambien podemos usar un dto con mas parametros, uso semanal, uso diario promedio, horas en las cuales se usa mas etc etc.
         //por ahora hacemos usoSemanal solo
     }
     public UsoSemanalDTO usoSemanalPrimerPlanoDTO(String token){
         String nombre= jwtService.extractUsername(token);
-        if(LocalDateTime.now().getDayOfWeek()== DayOfWeek.SUNDAY) {
-            List<UsoDiarioDTO> usoDiario = usageRepository.usoSemanalByNombre(nombre, LocalDateTime.now().minusWeeks(1), LocalDateTime.now(), Tipo.PRIMER_PLANO);
-            int uso_semanal = 0;
-            for (UsoDiarioDTO dto : usoDiario) {
-                uso_semanal = uso_semanal + dto.usoDiario();
-            }
-            if (uso_semanal == 0) {
-                return null;
-            }
-            return new UsoSemanalDTO(uso_semanal);
-        }return null;
-        //sumar tiempos y devolver el usoDto, tambien podemos usar un dto con mas parametros, uso semanal, uso diario promedio, horas en las cuales se usa mas etc etc.
-        //por ahora hacemos usoSemanal solo
+
+            List<UsoDiarioDTO> usoDiario = usageRepository.usoBetween(nombre, LocalDateTime.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)), LocalDateTime.now(), Tipo.PRIMER_PLANO);
+            return new UsoSemanalDTO(usoDiario);
     }
-    public UsoDiarioDTO usoDiarioPrimerPlanoDTO(String token){
+
+    public List<UsoDiarioDTO> usoDiarioPrimerPlanoDTO(String token){
         String nombre= jwtService.extractUsername(token);
-        return usageRepository.usoDiarioDTO(nombre,Tipo.PRIMER_PLANO);
+        return usageRepository.usoDiarioDTO(nombre,Tipo.PRIMER_PLANO, LocalDate.now().atStartOfDay(), LocalDateTime.now());
     }
-    public UsoDiarioDTO usoDiarioSegundoPlanoDTO(String token){
+    public List<UsoDiarioDTO> usoDiarioSegundoPlanoDTO(String token){
         String nombre= jwtService.extractUsername(token);
-        return usageRepository.usoDiarioDTO(nombre,Tipo.SEGUNDO_PLANO);
+        return usageRepository.usoDiarioDTO(nombre,Tipo.SEGUNDO_PLANO,LocalDate.now().atStartOfDay(), LocalDateTime.now());
+    }
+    public List<UsoDiarioDTO> usoMensualSegundoPlanoDTO(String token){
+        String nombre= jwtService.extractUsername(token);
+        return usageRepository.usoBetween(nombre,LocalDateTime.now().with(TemporalAdjusters.firstDayOfMonth()),LocalDateTime.now(),Tipo.SEGUNDO_PLANO);
+    } public List<UsoDiarioDTO> usoAnualSegundoPlanoDTO(String token){
+        String nombre= jwtService.extractUsername(token);
+        return usageRepository.usoBetween(nombre,LocalDateTime.now().with(TemporalAdjusters.firstDayOfYear()),LocalDateTime.now(),Tipo.SEGUNDO_PLANO);
+    }
+
+
+
+    public Response registrarUsoDiarioPrimerPlano(String token, UsoDiarioDTO usoDiarioDTO) {
+        Usage usage = new Usage();
+        String nombre= jwtService.extractUsername(token);
+        usage.setTiempo(usoDiarioDTO.usoDiario());
+        usage.setTimestampRealizado(usoDiarioDTO.uso());
+        usage.setTipo(Tipo.PRIMER_PLANO);
+        usage.setUsuario(usuarioRepository.findUsuarioByNombre(nombre));
+        usageRepository.save(usage);
+        return new Response(success,200,"Registrado Uso Diario Primer Plano");
+    }
+
+    public Response registrarUsoDiarioSegundoPlano(String token, UsoDiarioDTO usoDiarioDTO) {
+        Usage usage = new Usage();
+        String nombre= jwtService.extractUsername(token);
+        usage.setTiempo(usoDiarioDTO.usoDiario());
+        usage.setTimestampRealizado(usoDiarioDTO.uso());
+        usage.setTipo(Tipo.SEGUNDO_PLANO);
+        usage.setUsuario(usuarioRepository.findUsuarioByNombre(nombre));
+        usageRepository.save(usage);
+        return new Response(success,200,"Registrado Uso Diario Segundo Plano");
     }
 
 

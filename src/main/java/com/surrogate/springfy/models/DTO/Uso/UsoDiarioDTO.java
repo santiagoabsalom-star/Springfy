@@ -1,7 +1,9 @@
 package com.surrogate.springfy.models.DTO.Uso;
 
 
-public record UsoDiarioDTO(int usoDiario) {
+import java.time.LocalDateTime;
+
+public record UsoDiarioDTO(int usoDiario, LocalDateTime uso) {
 }
 
 

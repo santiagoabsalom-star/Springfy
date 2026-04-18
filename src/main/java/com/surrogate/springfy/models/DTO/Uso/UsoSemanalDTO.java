@@ -1,4 +1,5 @@
 package com.surrogate.springfy.models.DTO.Uso;
-
-public record UsoSemanalDTO(int usoSemanal) {
+import java.util.List;
+public record UsoSemanalDTO(List<UsoDiarioDTO> usoDiario) {
 }
+record UsoMensualDTO(List<UsoDiarioDTO> usoDiario) {}
