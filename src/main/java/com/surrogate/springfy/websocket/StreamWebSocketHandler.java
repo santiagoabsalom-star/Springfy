@@ -36,7 +36,7 @@ import static com.surrogate.springfy.services.bussines.DownloadService.rutaWav;
 public class StreamWebSocketHandler implements WebSocketHandler {
     private final ConcurrentMap<String, ClientState> pair = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
-  private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
     private static final int BYTES_PER_SECOND = 192000;
     private final DuoRepository duoRepository;
     private final AudioRepository audioRepository;
@@ -45,7 +45,10 @@ public class StreamWebSocketHandler implements WebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws IOException {
+
         String usuario = (String) session.getAttributes().get("Usuario");
+        pair.remove(usuario);
+        sessions.remove(usuario);
         log.info("Usuario en sesion es: {} ",  usuario);
         if(Objects.nonNull(usuario)) {
 

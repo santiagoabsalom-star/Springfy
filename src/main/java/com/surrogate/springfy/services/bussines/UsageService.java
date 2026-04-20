@@ -43,6 +43,8 @@ public class UsageService {
     }
     public Response terminar_segundo_plano(String nombre){
         if(segundo_plano.containsKey(nombre)){
+            log.info("Terminando segundo plano para {}", nombre);
+
         Usage usage=new Usage();
         usage.setTimestampRealizado(LocalDateTime.now());
         usage.setTipo(Tipo.SEGUNDO_PLANO);
@@ -66,6 +68,7 @@ public class UsageService {
     }
     public Response terminar_primer_plano(String nombre){
         if(primer_plano.containsKey(nombre)) {
+            log.info("Terminando primer plano para {}", nombre);
             Usage usage = new Usage();
             ZoneId uruguay= ZoneId.of("America/Montevideo");
 
@@ -82,7 +85,9 @@ public class UsageService {
     }
     public UsoSemanalDTO usoSemanalSegundoPlanoDTO(String token){
         String nombre= jwtService.extractUsername(token);
-            List<UsoDiarioDTO> usoDiario = usageRepository.usoBetween(nombre, LocalDateTime.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)), LocalDateTime.now(), Tipo.SEGUNDO_PLANO);
+        LocalDateTime semana= LocalDateTime.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay();
+        LocalDateTime hoy=LocalDateTime.now();
+            List<UsoDiarioDTO> usoDiario = usageRepository.usoBetween(nombre,semana,hoy,Tipo.SEGUNDO_PLANO);
 
 
 
@@ -92,8 +97,9 @@ public class UsageService {
     }
     public UsoSemanalDTO usoSemanalPrimerPlanoDTO(String token){
         String nombre= jwtService.extractUsername(token);
-
-            List<UsoDiarioDTO> usoDiario = usageRepository.usoBetween(nombre, LocalDateTime.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)), LocalDateTime.now(), Tipo.PRIMER_PLANO);
+            LocalDateTime semana= LocalDateTime.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toLocalDate().atStartOfDay();
+            LocalDateTime hoy=LocalDateTime.now();
+            List<UsoDiarioDTO> usoDiario = usageRepository.usoBetween(nombre, semana, hoy, Tipo.PRIMER_PLANO);
             return new UsoSemanalDTO(usoDiario);
     }
 

@@ -11,8 +11,16 @@ import java.util.List;
 
 
 public interface UsageRepository extends JpaRepository<Usage, Long> {
-    @Query("Select new com.surrogate.springfy.models.DTO.Uso.UsoDiarioDTO(u.tiempo,u.timestampRealizado) from Usage u where ((u.timestampRealizado between :inicioPeriodo AND :finPeriodo) AND u.usuario.nombre = :nombre) AND u.tipo = :tipo")
-    List<UsoDiarioDTO> usoBetween(String nombre, LocalDateTime inicioPeriodo, LocalDateTime finPeriodo, Tipo tipo);
+    @Query("""
+Select new com.surrogate.springfy.models.DTO.Uso.UsoDiarioDTO(
+    u.tiempo,
+    u.timestampRealizado
+)
+from Usage u
+where u.timestampRealizado between :inicioPeriodo and :finPeriodo
+  and u.usuario.nombre = :nombre
+  and u.tipo = :tipo
+""")List<UsoDiarioDTO> usoBetween(String nombre, LocalDateTime inicioPeriodo, LocalDateTime finPeriodo, Tipo tipo);
     @Query("Select new com.surrogate.springfy.models.DTO.Uso.UsoDiarioDTO(u.tiempo,u.timestampRealizado) from Usage u where ((u.timestampRealizado between :inicioDia AND :finDia) AND u.usuario.nombre = :nombre) AND u.tipo = :tipo")
     List<UsoDiarioDTO> usoDiarioDTO(String nombre, Tipo tipo, LocalDateTime inicioDia, LocalDateTime finDia);
     @Query("Select sum(u.tiempo) from Usage u where u.tipo = :tipo")

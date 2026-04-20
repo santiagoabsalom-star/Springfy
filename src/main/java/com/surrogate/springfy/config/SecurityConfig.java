@@ -161,10 +161,11 @@ public class SecurityConfig {
         return "error";
     }
 
-    @Bean
+    @Bean(name = "mapper")
     public ObjectMapper mapper() {
         return JsonMapper.builder()
                 .addModule(new JavaTimeModule())
                 .build();
     }
+
 }

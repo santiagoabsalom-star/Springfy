@@ -27,12 +27,11 @@ import static com.surrogate.springfy.websocket.StreamWebSocketHandler.getFile;
 @Slf4j
 @RequiredArgsConstructor
 public class DownloadService {
-    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final AudioRepository audioRepository;
     private final TaskScheduler taskScheduler;
-    String yturl = "https://www.youtube.com/watch?v=";
-    public static String rutaMp3 = "/home/santi/springfyCloud/mp3/";
-    public static String rutaWav = "/home/santi/springfyCloud/wav/";
+    static final String yturl = "https://www.youtube.com/watch?v=";
+    public static final String rutaMp3 = "/home/santi/springfyCloud/mp3/";
+    public static final String rutaWav = "/home/santi/springfyCloud/wav/";
     ProcessBuilder processBuilder = new ProcessBuilder();
     public Response downloadOnCloud(String videoId) {
         if (audioRepository.existsAudioByAudioId(videoId)) {
@@ -207,7 +206,7 @@ private void CronFileDelete(String videoId) {
             Audio audio = new Audio();
             audio.setPath(rutaAudio);
             audio.setNombreaudio(nombre);
-            audio.setDuration((int )getDurationSeconds(file));
+            audio.setDuration((int ) getDurationSeconds(file));
             audio.setAudioId(videoId);
             audio.setTipo("wav");
             audioRepository.save(audio);
